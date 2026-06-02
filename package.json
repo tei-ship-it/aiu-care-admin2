@@ -1,6 +1,6 @@
 {
   "name": "aiu-care-admin",
   "version": "1.0.0",
-  "description": "AiU Care 병원 상세페이지 어드민",
+  "type": "module",
   "engines": { "node": "24.x" }
 }
