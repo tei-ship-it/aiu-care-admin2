@@ -1,12 +1,7 @@
 {
   "version": 2,
-  "functions": {
-    "generate.js": {
-      "runtime": "nodejs24.x"
-    }
-  },
-  "routes": [
-    { "src": "/api/generate", "dest": "/generate.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/generate", "destination": "/generate.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
