@@ -34,7 +34,6 @@ module.exports = async function handler(req, res) {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
 
-      // gpt-image-1 시도 (최신 모델)
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -42,11 +41,11 @@ module.exports = async function handler(req, res) {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'chatgpt-image-latest',
           prompt: rest.prompt,
           n: 1,
-          size: '1024x1024',
-          quality: 'low'
+          size: rest.size || '1536x1024',
+          quality: 'medium'
         }),
       });
       const data = await response.json();
@@ -55,7 +54,6 @@ module.exports = async function handler(req, res) {
           error: data.error?.message || JSON.stringify(data)
         });
       }
-      // gpt-image-1은 b64_json으로 반환
       if (data.data && data.data[0] && data.data[0].b64_json) {
         data.data[0].url = 'data:image/png;base64,' + data.data[0].b64_json;
         delete data.data[0].b64_json;
