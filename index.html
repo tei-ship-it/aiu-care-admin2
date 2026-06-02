@@ -174,11 +174,9 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 <div class="tabs">
   <div class="tab on" data-sec="basic">① 기본정보</div>
   <div class="tab" data-sec="brand">② 브랜딩</div>
-  <div class="tab" data-sec="clinic">③ 진료정보</div>
+  <div class="tab" data-sec="clinic">③ 진료·톤</div>
   <div class="tab" data-sec="ai">④ AI 현황</div>
-  <div class="tab" data-sec="tone">⑤ 톤 설정</div>
-  <div class="tab" data-sec="copy">⑥ 문구</div>
-  <div class="tab" data-sec="photos">⑦ 사진</div>
+  <div class="tab" data-sec="copy">⑤ 문구·사진</div>
 </div>
 
 <!-- ① 기본정보 -->
@@ -284,20 +282,6 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
       </div>
     </div>
   </div>
-</div>
-
-<!-- ④ AI 현황 -->
-<div id="sec-ai" style="display:none">
-  <div class="card">
-    <div class="card-title">AI 솔루션 현황</div>
-    <div style="margin-bottom:12px"><label class="lbl">도입 솔루션<span class="req">*</span></label><div class="chips" id="sol-chips"></div></div>
-    <label class="lbl" style="margin-bottom:8px">활성화 기능</label>
-    <div id="feat-rows"></div>
-  </div>
-</div>
-
-<!-- ⑤ 톤 설정 -->
-<div id="sec-tone" style="display:none">
   <div class="card">
     <div class="card-title">페이지 톤 & 무드</div>
     <label class="lbl">분위기 <span style="color:#bbb;font-weight:400">(복수 선택 가능)</span></label>
@@ -309,6 +293,16 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
     <div class="target-group"><span class="target-group-lbl">연령대</span><div class="chips" id="tg-age"></div></div>
     <div class="target-group"><span class="target-group-lbl">특수</span><div class="chips" id="tg-special"></div></div>
     <div id="target-sel" style="font-size:11px;color:#888;margin-bottom:0"></div>
+  </div>
+</div>
+
+<!-- ④ AI 현황 -->
+<div id="sec-ai" style="display:none">
+  <div class="card">
+    <div class="card-title">AI 솔루션 현황</div>
+    <div style="margin-bottom:12px"><label class="lbl">도입 솔루션<span class="req">*</span></label><div class="chips" id="sol-chips"></div></div>
+    <label class="lbl" style="margin-bottom:8px">활성화 기능</label>
+    <div id="feat-rows"></div>
   </div>
 </div>
 
@@ -331,10 +325,6 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
       <input class="inp" id="f-message" value="예약 없이도 빠른 진료 가능">
     </div>
   </div>
-</div>
-
-<!-- ⑦ 사진 -->
-<div id="sec-photos" style="display:none">
   <div class="card">
     <div class="card-title">병원 사진 업로드</div>
     <span class="ex" style="margin-bottom:12px">업로드한 사진은 상세페이지에 직접 배치되고, 사진이 없는 영역만 AI 이미지로 보완됩니다. 각 항목당 여러 장을 한 번에 선택할 수 있습니다.</span>
@@ -462,7 +452,7 @@ function applyBrand(hex){
 }
 
 function switchTab(sec){
-  ['basic','brand','clinic','ai','tone','copy','photos'].forEach(function(s){
+  ['basic','brand','clinic','ai','copy'].forEach(function(s){
     document.getElementById('sec-'+s).style.display=s===sec?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(function(t){
