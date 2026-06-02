@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,12 +8,31 @@ export default async function handler(req, res) {
   const { type, ...body } = req.body;
 
   try {
-if (type === 'image') {
+    if (type === 'copy') {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: 'Claude API 키가 설정되지 않았습니다' });
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      return res.status(response.status).json(data);
+    }
+
+    if (type === 'image') {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
           model: 'gpt-image-1',
           prompt: body.prompt,
@@ -23,28 +42,15 @@ if (type === 'image') {
         }),
       });
       const data = await response.json();
+      // gpt-image-1은 base64로 반환 → data URL로 변환
+      if (data.data && data.data[0] && data.data[0].b64_json) {
+        data.data[0].url = 'data:image/png;base64,' + data.data[0].b64_json;
+        delete data.data[0].b64_json;
+      }
       return res.status(response.status).json(data);
     }
 
-if (type === 'image') {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: body.model || 'dall-e-3',
-          prompt: body.prompt,
-          n: 1,
-          size: '1792x1024',
-          quality: 'standard'
-        }),
-      });
-      const data = await response.json();
-      return res.status(response.status).json(data);
-    }
-
-    return res.status(400).json({ error: 'type 파라미터가 필요합니다' });
+    return res.status(400).json({ error: 'type 파라미터가 필요합니다 (copy 또는 image)' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
