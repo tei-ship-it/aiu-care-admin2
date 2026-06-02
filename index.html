@@ -401,7 +401,7 @@ const S={
   dept:null,specialties:[],sol:'에이유 (AiU)',features:['chat24','booking','aftercare'],
   tones:['trust'],targets:['common','all_age'],
   titleFont:'noto-serif',bodyFont:'noto-sans',
-  heroImg:null,logoImg:null,
+  heroImg:null,logoImg:null,aboutImg:null,whyImgs:[null,null,null,null],
   directors:[{name:'김민준',title:'대표원장',photo:null,
     careerText:'서울대학교병원 내과 전공의\n서울연세내과의원 원장',
     comment:'환자 한 분 한 분의 이야기에 귀 기울이는 진료를 실천합니다'}],
@@ -640,29 +640,37 @@ async function verifyDalleKey(){
     else setDalleStatus('err','키가 유효하지 않습니다');
   }catch(e){setDalleStatus('err','네트워크 오류');}
 }
-function buildDallePrompt(){
+function buildPrompt(section, extra){
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
   var dn=dept?dept.label:'medical clinic';
   var sp=S.specialties.slice(0,2).join(', ')||dn;
   var toneMap={trust:'clean professional trustworthy',warm:'warm welcoming friendly',expert:'high-tech sophisticated medical',modern:'modern minimalist contemporary',friendly:'bright cheerful approachable'};
   var tk=toneMap[S.tones[0]]||'professional';
-  return 'A '+tk+' '+dn+' hospital interior photograph. Modern '+sp+' medical clinic. Bright, clean, no people, no text, no logos. Horizontal format, high quality.';
+  var base='Korean '+dn+' hospital. '+tk+' style. No people, no text, no logos. High quality photo.';
+  if(section==='hero') return 'Exterior or lobby of a '+tk+' '+dn+' clinic. '+sp+'. Bright, clean, modern. '+base;
+  if(section==='about') return 'Warm consultation room or doctor desk in a '+dn+' clinic. Soft lighting, trustworthy atmosphere. '+base;
+  if(section==='why') return 'Close-up of '+( extra||'medical equipment or clean clinic interior')+' in a '+dn+' clinic. '+tk+'. '+base;
+  return base;
+}
+function buildDallePrompt(){return buildPrompt('hero');}
+async function genImg(prompt, size){
+  var res=await fetch('/api/generate',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type:'image',prompt:prompt,size:size||'1536x1024'})
+  });
+  if(!res.ok){var e=await res.json().catch(function(){return{};});throw new Error(e.error||'이미지 생성 실패');}
+  var data=await res.json();
+  return data.data&&data.data[0]&&data.data[0].url;
 }
 async function generateDalleImage(){
   var btn=document.getElementById('dalle-hero-btn');
   var statusEl=document.getElementById('dalle-hero-status');
   if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중...';}
-  if(statusEl){statusEl.style.display='block';statusEl.textContent='🎨 DALL·E 3로 이미지 생성 중... (약 10~20초)';}
+  if(statusEl){statusEl.style.display='block';statusEl.textContent='🎨 히어로 이미지 생성 중... (10~20초)';}
   try{
-    var res=await fetch('/api/generate',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'image',model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
-    });
-    if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'생성 실패');}
-    var data=await res.json();
-    var imgUrl=data.data&&data.data[0]&&data.data[0].url;
-    if(!imgUrl)throw new Error('이미지 URL을 받지 못했습니다');
-    S.heroImg=imgUrl;renderHeroWrap();
+    var url=await genImg(buildPrompt('hero'),'1536x1024');
+    if(!url)throw new Error('이미지 URL을 받지 못했습니다');
+    S.heroImg=url;renderHeroWrap();
     if(statusEl)statusEl.textContent='✓ 이미지 생성 완료';
   }catch(e){
     if(statusEl){statusEl.style.background='#fef2f2';statusEl.style.color='#b91c1c';statusEl.textContent='✗ '+e.message;}
@@ -695,18 +703,22 @@ async function generate(){
     var data=await res.json();
     S.copy=JSON.parse(data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim());
 
-    if(!S.heroImg){
-      {
-        btn.textContent='⏳ AI 이미지 생성 중...';
-        try{
-          var dr=await fetch('/api/generate',{
-            method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({type:'image',model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
-          });
-          if(dr.ok){var dd=await dr.json();var iu=dd.data&&dd.data[0]&&dd.data[0].url;if(iu){S.heroImg=iu;renderHeroWrap();}}
-        }catch(e){}
-      }
-    }
+    // 이미지 병렬 생성 (히어로 + About + Why Us 4장)
+    btn.textContent='⏳ AI 이미지 생성 중... (1~2분 소요)';
+    var cp2=S.copy;
+    var whyTitles=(cp2.strengths||[]).map(function(s){return s.title||'clinic';});
+    var imgPromises=[
+      S.heroImg?Promise.resolve(S.heroImg):genImg(buildPrompt('hero'),'1536x1024').catch(function(){return null;}),
+      S.aboutImg?Promise.resolve(S.aboutImg):genImg(buildPrompt('about'),'1024x1024').catch(function(){return null;}),
+      genImg(buildPrompt('why',whyTitles[0]||'medical'),'1024x1024').catch(function(){return null;}),
+      genImg(buildPrompt('why',whyTitles[1]||'equipment'),'1024x1024').catch(function(){return null;}),
+      genImg(buildPrompt('why',whyTitles[2]||'consultation'),'1024x1024').catch(function(){return null;}),
+      genImg(buildPrompt('why',whyTitles[3]||'clinic'),'1024x1024').catch(function(){return null;})
+    ];
+    var imgs=await Promise.all(imgPromises);
+    if(imgs[0]&&!S.heroImg){S.heroImg=imgs[0];renderHeroWrap();}
+    if(imgs[1])S.aboutImg=imgs[1];
+    S.whyImgs=[imgs[2],imgs[3],imgs[4],imgs[5]];
 
     S.showPreview=true;
     document.getElementById('admin-view').style.display='none';
@@ -731,7 +743,17 @@ function renderPreview(){
   var infoRows=[['위치',v('f-addr')]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
   var eyebrow=dept?dept.label+(S.specialties.length?' · '+S.specialties.slice(0,1).join(''):''):'';
-  var strItems=(cp.strengths||[]).map(function(st,i){return '<div class="str-item"><span class="str-num" style="color:'+br+'">0'+(i+1)+'</span><div><div class="str-ttl">'+st.title+'</div><div class="str-desc">'+st.desc+'</div></div></div>';}).join('');
+  var strItems=(cp.strengths||[]).map(function(st,i){
+    var wi=S.whyImgs&&S.whyImgs[i];
+    return '<div class="str-item">'
+      +'<span class="str-num" style="color:'+br+'">0'+(i+1)+'</span>'
+      +'<div style="flex:1">'
+        +(wi?'<img src="'+wi+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block">':'')
+        +'<div class="str-ttl">'+st.title+'</div>'
+        +'<div class="str-desc">'+st.desc+'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
   var aiBadges=FEATURES.filter(function(f){return S.features.indexOf(f.id)>=0;}).map(function(f){return '<span class="ai-bdg" style="background:rgba('+c.r+','+c.g+','+c.b+',0.1);color:'+br+';border:1px solid rgba('+c.r+','+c.g+','+c.b+',0.15)">'+f.label+'</span>';}).join(' ');
   var addr=v('f-addr');
   var dirSecs=S.directors.map(function(d,i){
@@ -760,33 +782,10 @@ function renderPreview(){
     +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Information</div><div class="s-ttl">진료 안내</div>'
       +infoRows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')
     +'</div>'
-    +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
+    +'<div class="p-sec">'
+      +(S.aboutImg?'<img src="'+S.aboutImg+'" style="width:100%;height:200px;object-fit:cover;border-radius:8px;margin-bottom:16px;display:block">':'')
+      +'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
     +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+strItems+'</div>'
     +'<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)"><div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+cp.ai_section_title+'</div><p class="s-body">'+cp.ai_section_body+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+aiBadges+'</div></div>'
     +dirSecs
-    +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+cp.cta_text+'</button></div>'
-    +'<div class="pg-ft"><span>AiU Care · WiseAI</span><span>aiu-care.kr</span></div>';
-}
-
-function renderAll(){
-  renderSchedule();renderDepts();renderSpecs();renderSols();
-  renderFeats();renderTones();renderTargets();
-  renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
-  renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
-  renderDirectors();
-}
-
-document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){switchTab(this.dataset.sec);});});
-document.getElementById('cp').addEventListener('input',function(){applyBrand(this.value);});
-document.getElementById('color-hex').addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(this.value))applyBrand(this.value);});
-document.getElementById('f-name').addEventListener('input',function(){document.getElementById('crumb').textContent='/ '+this.value;});
-document.getElementById('cust-spec').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addCustomSpec();}});
-document.getElementById('lunch-s').addEventListener('input',function(){S.schedule.lunch.start=this.value;});
-document.getElementById('lunch-e').addEventListener('input',function(){S.schedule.lunch.end=this.value;});
-
-applyBrand('#1A6FA8');
-switchTab('basic');
-// file:// 경고 비활성화 (프록시 방식으로 동작)
-</script>
-</body>
-</html>
+    +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;ba
