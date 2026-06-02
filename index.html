@@ -679,7 +679,7 @@ async function generateDalleImage(){
   }
 }
 
-async function generate(){
+async function runGenerate(){
 
   var btn=document.getElementById('gen-btn');
   btn.textContent='⏳ 생성 중...';btn.disabled=true;
@@ -788,4 +788,29 @@ function renderPreview(){
     +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+strItems+'</div>'
     +'<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)"><div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+cp.ai_section_title+'</div><p class="s-body">'+cp.ai_section_body+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+aiBadges+'</div></div>'
     +dirSecs
-    +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;ba
+    +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+cp.cta_text+'</button></div>'
+    +'<div class="pg-ft"><span>AiU Care · WiseAI</span><span>aiu-care.kr</span></div>';
+}
+
+function renderAll(){
+  renderSchedule();renderDepts();renderSpecs();renderSols();
+  renderFeats();renderTones();renderTargets();
+  renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
+  renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
+  renderDirectors();
+}
+
+document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){switchTab(this.dataset.sec);});});
+document.getElementById('cp').addEventListener('input',function(){applyBrand(this.value);});
+document.getElementById('color-hex').addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(this.value))applyBrand(this.value);});
+document.getElementById('f-name').addEventListener('input',function(){document.getElementById('crumb').textContent='/ '+this.value;});
+document.getElementById('cust-spec').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addCustomSpec();}});
+document.getElementById('lunch-s').addEventListener('input',function(){S.schedule.lunch.start=this.value;});
+document.getElementById('lunch-e').addEventListener('input',function(){S.schedule.lunch.end=this.value;});
+
+applyBrand('#1A6FA8');
+switchTab('basic');
+// file:// 경고 비활성화 (프록시 방식으로 동작)
+</script>
+</body>
+</html>
