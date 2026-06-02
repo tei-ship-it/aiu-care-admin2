@@ -642,14 +642,27 @@ async function verifyDalleKey(){
 }
 function buildPrompt(section, extra){
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
-  var dn=dept?dept.label:'medical clinic';
+  var dn=dept?dept.label:'의료';
   var sp=S.specialties.slice(0,2).join(', ')||dn;
   var toneMap={trust:'clean professional trustworthy',warm:'warm welcoming friendly',expert:'high-tech sophisticated medical',modern:'modern minimalist contemporary',friendly:'bright cheerful approachable'};
   var tk=toneMap[S.tones[0]]||'professional';
-  var base='Korean '+dn+' hospital. '+tk+' style. No people, no text, no logos. High quality photo.';
-  if(section==='hero') return 'Exterior or lobby of a '+tk+' '+dn+' clinic. '+sp+'. Bright, clean, modern. '+base;
-  if(section==='about') return 'Warm consultation room or doctor desk in a '+dn+' clinic. Soft lighting, trustworthy atmosphere. '+base;
-  if(section==='why') return 'Close-up of '+( extra||'medical equipment or clean clinic interior')+' in a '+dn+' clinic. '+tk+'. '+base;
+  var base='Korean hospital clinic. '+tk+' style. No people, no text overlay, no logos. Photorealistic high quality interior photo.';
+
+  // 카피 기반 프롬프트
+  var cp=S.copy;
+
+  if(section==='hero'){
+    var heroCtx=cp?cp.slogan+' '+cp.hero_subtext:'';
+    return 'Modern '+dn+' clinic lobby or corridor. '+sp+'. '+tk+'. '+heroCtx+' '+base;
+  }
+  if(section==='about'){
+    var aboutCtx=cp?cp.about_intro:'trustworthy medical consultation';
+    return 'Medical consultation room scene representing: '+aboutCtx+'. '+dn+' clinic. Soft warm lighting, professional atmosphere. '+base;
+  }
+  if(section==='why'){
+    var whyCtx=extra||'medical clinic feature';
+    return 'Hospital scene representing "'+whyCtx+'" in a '+dn+' clinic. Close-up detail shot. '+tk+'. '+base;
+  }
   return base;
 }
 function buildDallePrompt(){return buildPrompt('hero');}
@@ -743,17 +756,22 @@ function renderPreview(){
   var infoRows=[['위치',v('f-addr')]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
   var eyebrow=dept?dept.label+(S.specialties.length?' · '+S.specialties.slice(0,1).join(''):''):'';
-  var strItems=(cp.strengths||[]).map(function(st,i){
-    var wi=S.whyImgs&&S.whyImgs[i];
-    return '<div class="str-item">'
-      +'<span class="str-num" style="color:'+br+'">0'+(i+1)+'</span>'
-      +'<div style="flex:1">'
-        +(wi?'<img src="'+wi+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:block">':'')
-        +'<div class="str-ttl">'+st.title+'</div>'
-        +'<div class="str-desc">'+st.desc+'</div>'
-      +'</div>'
+  // Why Us: 2열 그리드 레이아웃
+  var strItems='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+    +(cp.strengths||[]).map(function(st,i){
+      var wi=S.whyImgs&&S.whyImgs[i];
+      return '<div style="display:flex;flex-direction:column;gap:10px">'
+        +(wi?'<img src="'+wi+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block">':'')
+        +'<div>'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+            +'<span class="str-num" style="color:'+br+'">0'+(i+1)+'</span>'
+            +'<div class="str-ttl">'+st.title+'</div>'
+          +'</div>'
+          +'<div class="str-desc">'+st.desc+'</div>'
+        +'</div>'
+      +'</div>';
+    }).join('')
     +'</div>';
-  }).join('');
   var aiBadges=FEATURES.filter(function(f){return S.features.indexOf(f.id)>=0;}).map(function(f){return '<span class="ai-bdg" style="background:rgba('+c.r+','+c.g+','+c.b+',0.1);color:'+br+';border:1px solid rgba('+c.r+','+c.g+','+c.b+',0.15)">'+f.label+'</span>';}).join(' ');
   var addr=v('f-addr');
   var dirSecs=S.directors.map(function(d,i){
@@ -783,8 +801,13 @@ function renderPreview(){
       +infoRows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')
     +'</div>'
     +'<div class="p-sec">'
-      +(S.aboutImg?'<img src="'+S.aboutImg+'" style="width:100%;height:200px;object-fit:cover;border-radius:8px;margin-bottom:16px;display:block">':'')
-      +'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
+      +(S.aboutImg
+        ?'<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:0">'
+          +'<img src="'+S.aboutImg+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0">'
+          +'<div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
+          +'</div>'
+        :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p>'
+      )+'</div>'
     +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+strItems+'</div>'
     +'<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)"><div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+cp.ai_section_title+'</div><p class="s-body">'+cp.ai_section_body+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+aiBadges+'</div></div>'
     +dirSecs
