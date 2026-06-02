@@ -37,12 +37,11 @@ module.exports = async function handler(req, res) {
           model: 'gpt-image-1',
           prompt: body.prompt,
           n: 1,
-          size: '1536x1024',
+          size: body.size || '1536x1024',
           quality: 'standard'
         }),
       });
       const data = await response.json();
-      // gpt-image-1은 base64로 반환 → data URL로 변환
       if (data.data && data.data[0] && data.data[0].b64_json) {
         data.data[0].url = 'data:image/png;base64,' + data.data[0].b64_json;
         delete data.data[0].b64_json;
@@ -50,7 +49,7 @@ module.exports = async function handler(req, res) {
       return res.status(response.status).json(data);
     }
 
-    return res.status(400).json({ error: 'type 파라미터가 필요합니다 (copy 또는 image)' });
+    return res.status(400).json({ error: 'type 파라미터가 필요합니다' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
