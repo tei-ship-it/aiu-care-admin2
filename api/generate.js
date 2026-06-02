@@ -5,7 +5,17 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { type, ...body } = req.body;
+  // body 파싱 확인
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch(e) { return res.status(400).json({ error: 'Invalid JSON' }); }
+  }
+  if (!body) return res.status(400).json({ error: 'Request body가 없습니다' });
+
+  const { type, ...rest } = body;
+
+  // 디버깅용
+  if (!type) return res.status(400).json({ error: 'type 파라미터 없음', received: body });
 
   try {
     if (type === 'copy') {
@@ -18,7 +28,7 @@ module.exports = async function handler(req, res) {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(rest),
       });
       const data = await response.json();
       return res.status(response.status).json(data);
@@ -35,7 +45,7 @@ module.exports = async function handler(req, res) {
         },
         body: JSON.stringify({
           model: 'dall-e-3',
-          prompt: body.prompt,
+          prompt: rest.prompt,
           n: 1,
           size: '1024x1024'
         }),
@@ -43,8 +53,7 @@ module.exports = async function handler(req, res) {
       const data = await response.json();
       if (!response.ok) {
         return res.status(response.status).json({
-          error: data.error?.message || JSON.stringify(data),
-          raw: data
+          error: data.error?.message || JSON.stringify(data)
         });
       }
       if (data.data && data.data[0] && data.data[0].b64_json) {
@@ -54,7 +63,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    return res.status(400).json({ error: 'type 파라미터가 필요합니다 (copy 또는 image)' });
+    return res.status(400).json({ error: 'type은 copy 또는 image 여야 합니다', received: type });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
