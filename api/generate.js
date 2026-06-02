@@ -5,7 +5,6 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // body 파싱 확인
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch(e) { return res.status(400).json({ error: 'Invalid JSON' }); }
@@ -13,9 +12,6 @@ module.exports = async function handler(req, res) {
   if (!body) return res.status(400).json({ error: 'Request body가 없습니다' });
 
   const { type, ...rest } = body;
-
-  // 디버깅용
-  if (!type) return res.status(400).json({ error: 'type 파라미터 없음', received: body });
 
   try {
     if (type === 'copy') {
@@ -37,6 +33,8 @@ module.exports = async function handler(req, res) {
     if (type === 'image') {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
+
+      // gpt-image-1 시도 (최신 모델)
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -44,10 +42,11 @@ module.exports = async function handler(req, res) {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'dall-e-3',
+          model: 'gpt-image-1',
           prompt: rest.prompt,
           n: 1,
-          size: '1024x1024'
+          size: '1024x1024',
+          quality: 'low'
         }),
       });
       const data = await response.json();
@@ -56,6 +55,7 @@ module.exports = async function handler(req, res) {
           error: data.error?.message || JSON.stringify(data)
         });
       }
+      // gpt-image-1은 b64_json으로 반환
       if (data.data && data.data[0] && data.data[0].b64_json) {
         data.data[0].url = 'data:image/png;base64,' + data.data[0].b64_json;
         delete data.data[0].b64_json;
@@ -63,7 +63,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    return res.status(400).json({ error: 'type은 copy 또는 image 여야 합니다', received: type });
+    return res.status(400).json({ error: 'type은 copy 또는 image 여야 합니다' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
