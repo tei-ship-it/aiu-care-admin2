@@ -701,7 +701,7 @@ function buildPrompt(section, extra){
   var sp=S.specialties.slice(0,2).join(', ')||dn;
   var toneMap={trust:'clean professional trustworthy',warm:'warm welcoming friendly',expert:'high-tech sophisticated medical',modern:'modern minimalist contemporary',friendly:'bright cheerful approachable'};
   var tk=toneMap[S.tones[0]]||'professional';
-  var base='Korean hospital clinic. '+tk+' style. No people, no text overlay, no logos. Photorealistic high quality interior photo.';
+  var base='Korean hospital clinic. '+tk+' style. Include people only when it suits the scene and copy — at most a few hands in the foreground or a single distant blurred silhouette, never identifiable faces or portraits; if people do not fit, show the space or objects with no people at all. No text overlay, no logos. Photorealistic high quality interior photo.';
 
   // 카피 기반 프롬프트
   var cp=S.copy;
