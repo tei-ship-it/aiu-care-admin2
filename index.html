@@ -696,18 +696,18 @@ function buildPrompt(section, extra){
   var sp=S.specialties.slice(0,2).join(', ')||dn;
   var toneMap={trust:'clean professional trustworthy',warm:'warm welcoming friendly',expert:'high-tech sophisticated medical',modern:'modern minimalist contemporary',friendly:'bright cheerful approachable'};
   var tk=toneMap[S.tones[0]]||'professional';
-  var base='Korean hospital clinic. '+tk+' style. Include people only when it suits the scene and copy — at most a few hands in the foreground or a single distant blurred silhouette, never identifiable faces or portraits; if people do not fit, show the space or objects with no people at all. No text overlay, no logos. Photorealistic high quality interior photo.';
+  var base='Korean hospital clinic. '+tk+' style. Include people only when it suits the scene and copy — at most a few hands in the foreground or a single distant blurred silhouette, never identifiable faces or portraits; if people do not fit, show the space or objects with no people at all. No text, letters, words, captions, signage, or logos anywhere in the image — a purely visual scene. Photorealistic high quality interior photo.';
 
   // 카피 기반 프롬프트
   var cp=S.copy;
 
   if(section==='hero'){
     var heroCtx=cp?cp.slogan+' '+cp.hero_subtext:'';
-    return 'Modern '+dn+' clinic lobby or corridor. '+sp+'. '+tk+'. '+heroCtx+' '+base;
+    return 'Modern '+dn+' clinic lobby or corridor. '+sp+'. '+tk+'. Mood reference only, do NOT render these words as text in the image: '+heroCtx+'. '+base;
   }
   if(section==='about'){
     var aboutCtx=cp?cp.about_intro:'trustworthy medical consultation';
-    return 'Medical consultation room scene representing: '+aboutCtx+'. '+dn+' clinic. Soft warm lighting, professional atmosphere. '+base;
+    return 'Medical consultation room scene. Mood reference only, do NOT render as text: '+aboutCtx+'. '+dn+' clinic. Soft warm lighting, professional atmosphere. '+base;
   }
   if(section==='why'){
     var whyCtx=extra||'medical clinic feature';
@@ -854,7 +854,11 @@ function computeLayoutOrder(){
   order.forEach(function(id){if(valid.indexOf(id)>=0&&!seen[id]){seen[id]=1;out.push(id);}});
   out=out.filter(function(id){return id!=='hero';});out.unshift('hero');
   out=out.filter(function(id){return id!=='cta';});out.push('cta');
-  if(out.length<=2)out=['hero','map','info','about','why','gallery','ai','directors','cta'];
+  if(out.length<=2)out=['hero','info','map','about','why','gallery','ai','directors','cta'];
+  // 지도(찾아오는 길)는 항상 진료안내(info) 바로 아래에 배치 (info 없으면 hero 다음)
+  out=out.filter(function(id){return id!=='map';});
+  var anchor=out.indexOf('info');if(anchor<0)anchor=out.indexOf('hero');
+  out.splice(anchor+1,0,'map');
   return out.map(function(id){return {id:id,emphasis:emph.indexOf(id)>=0};});
 }
 function renderPreview(){
@@ -876,7 +880,7 @@ function renderPreview(){
         +'<button class="h-cta" style="color:'+br+'">'+(cp.cta_text||'자세히 보기')+' →</button>'
       +'</div></div>';
     },
-    map:function(e){return addr?'<div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div>':'';},
+    map:function(e){return addr?'<div style="'+bg(e)+'"><div style="padding:28px 28px 14px"><div class="s-eye" style="color:'+br+'">Location</div><div class="s-ttl" style="margin-bottom:0">찾아오는 길</div></div><div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div></div>':'';},
     info:function(e){
       var lines=schedLines();
       var rows=[['위치',addr]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
