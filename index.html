@@ -63,6 +63,18 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 .target-group-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:5px;display:block}
 .upload-box{border:0.5px dashed #ddd;border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:#f9f9f9}
 .upload-box:hover{border-color:#999}
+.photo-group{border:0.5px solid rgba(0,0,0,.08);border-radius:10px;padding:12px;margin-bottom:12px;background:#fff}
+.pgh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pgh-ico{font-size:20px;flex-shrink:0}
+.pgh-name{font-size:12px;font-weight:500;color:#1a1a1a}
+.pgh-hint{font-size:10px;color:#aaa;margin-top:1px}
+.pgh-count{margin-left:auto;font-size:10px;color:#888;background:#f5f4f1;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:0.5px solid #eee}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-del{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.photo-add{aspect-ratio:1;border:0.5px dashed #ccc;border-radius:8px;background:#f9f9f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#aaa;cursor:pointer}
+.photo-add:hover{border-color:#999;color:#777}
 .dir-card{border:0.5px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:8px;background:#fff}
 .dir-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .dir-num{font-size:10px;font-weight:700;letter-spacing:.08em;color:#aaa;text-transform:uppercase}
@@ -165,6 +177,7 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
   <div class="tab" data-sec="clinic">③ 진료정보</div>
   <div class="tab" data-sec="ai">④ AI 현황</div>
   <div class="tab" data-sec="tone">⑤ 톤 설정</div>
+  <div class="tab" data-sec="photos">⑥ 사진</div>
 </div>
 
 <!-- ① 기본정보 -->
@@ -306,6 +319,15 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
     <div class="f"><label class="lbl">강조 메시지</label><span class="ex">예: 당일 예약 가능, 비급여 상담 무료</span><input class="inp" id="f-message" value="예약 없이도 빠른 진료 가능"></div>
   </div>
 </div>
+
+<!-- ⑥ 사진 -->
+<div id="sec-photos" style="display:none">
+  <div class="card">
+    <div class="card-title">병원 사진 업로드</div>
+    <span class="ex" style="margin-bottom:12px">업로드한 사진은 상세페이지에 직접 배치되고, 사진이 없는 영역만 AI 이미지로 보완됩니다. 각 항목당 여러 장을 한 번에 선택할 수 있습니다.</span>
+    <div id="photo-groups"></div>
+  </div>
+</div>
 </div>
 
 <div id="preview-bar">
@@ -402,6 +424,7 @@ const S={
   tones:['trust'],targets:['common','all_age'],
   titleFont:'noto-serif',bodyFont:'noto-sans',
   heroImg:null,logoImg:null,aboutImg:null,whyImgs:[null,null,null,null],
+  photos:{internal:[],external:[],strength:[]},
   directors:[{name:'김민준',title:'대표원장',photo:null,
     careerText:'서울대학교병원 내과 전공의\n서울연세내과의원 원장',
     comment:'환자 한 분 한 분의 이야기에 귀 기울이는 진료를 실천합니다'}],
@@ -426,7 +449,7 @@ function applyBrand(hex){
 }
 
 function switchTab(sec){
-  ['basic','brand','clinic','ai','tone'].forEach(function(s){
+  ['basic','brand','clinic','ai','tone','photos'].forEach(function(s){
     document.getElementById('sec-'+s).style.display=s===sec?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(function(t){
@@ -640,6 +663,26 @@ async function verifyDalleKey(){
     else setDalleStatus('err','키가 유효하지 않습니다');
   }catch(e){setDalleStatus('err','네트워크 오류');}
 }
+// 업로드 사진 → 섹션 매핑 (강점→Why Us 4칸, 내부+외부+강점초과분→갤러리)
+// 히어로는 브랜딩 이미지/그라디언트, About은 카피 기반 AI 이미지 사용
+function imagePlan(){
+  var intr=((S.photos&&S.photos.internal)||[]).slice();
+  var ext=((S.photos&&S.photos.external)||[]).slice();
+  var str=((S.photos&&S.photos.strength)||[]).slice();
+  var whyUp=[];for(var i=0;i<4;i++)whyUp.push(str.shift()||null);
+  var gallery=intr.concat(ext,str);
+  return {whyUp:whyUp,gallery:gallery};
+}
+// 최종 이미지: Why Us는 강점 업로드 우선·없으면 AI, 히어로/About은 S값(브랜딩/AI)
+function resolveImages(){
+  var p=imagePlan();
+  return {
+    hero:S.heroImg||null,
+    about:S.aboutImg||null,
+    why:p.whyUp.map(function(u,i){return u||(S.whyImgs&&S.whyImgs[i])||null;}),
+    gallery:p.gallery
+  };
+}
 function buildPrompt(section, extra){
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
   var dn=dept?dept.label:'의료';
@@ -716,22 +759,29 @@ async function runGenerate(){
     var data=await res.json();
     S.copy=JSON.parse(data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim());
 
-    // 이미지 병렬 생성 (히어로 + About + Why Us 4장)
-    btn.textContent='⏳ AI 이미지 생성 중... (1~2분 소요)';
+    // 이미지 생성 — 강점 사진이 채운 Why Us 칸은 건너뛰고, About과 빈 칸만 AI로 생성
     var cp2=S.copy;
     var whyTitles=(cp2.strengths||[]).map(function(s){return s.title||'clinic';});
+    var plan=imagePlan();
+    var needAbout=!S.aboutImg;
+    var whyNeed=plan.whyUp.map(function(u){return !u;});
+    var genCount=(needAbout?1:0)+whyNeed.filter(Boolean).length;
+    btn.textContent=genCount?('⏳ AI 이미지 생성 중... ('+genCount+'장, 최대 1~2분)'):'⏳ 미리보기 준비 중...';
     var imgPromises=[
-      S.heroImg?Promise.resolve(S.heroImg):genImg(buildPrompt('hero'),'1536x1024').catch(function(){return null;}),
-      S.aboutImg?Promise.resolve(S.aboutImg):genImg(buildPrompt('about'),'1024x1024').catch(function(){return null;}),
-      genImg(buildPrompt('why',whyTitles[0]||'medical'),'1024x1024').catch(function(){return null;}),
-      genImg(buildPrompt('why',whyTitles[1]||'equipment'),'1024x1024').catch(function(){return null;}),
-      genImg(buildPrompt('why',whyTitles[2]||'consultation'),'1024x1024').catch(function(){return null;}),
-      genImg(buildPrompt('why',whyTitles[3]||'clinic'),'1024x1024').catch(function(){return null;})
+      needAbout?genImg(buildPrompt('about'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[0]?genImg(buildPrompt('why',whyTitles[0]||'medical'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[1]?genImg(buildPrompt('why',whyTitles[1]||'equipment'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[2]?genImg(buildPrompt('why',whyTitles[2]||'consultation'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[3]?genImg(buildPrompt('why',whyTitles[3]||'clinic'),'1024x1024').catch(function(){return null;}):Promise.resolve(null)
     ];
     var imgs=await Promise.all(imgPromises);
-    if(imgs[0]&&!S.heroImg){S.heroImg=imgs[0];renderHeroWrap();}
-    if(imgs[1])S.aboutImg=imgs[1];
-    S.whyImgs=[imgs[2],imgs[3],imgs[4],imgs[5]];
+    if(imgs[0]&&needAbout)S.aboutImg=imgs[0];
+    S.whyImgs=[
+      whyNeed[0]?(imgs[1]||null):null,
+      whyNeed[1]?(imgs[2]||null):null,
+      whyNeed[2]?(imgs[3]||null):null,
+      whyNeed[3]?(imgs[4]||null):null
+    ];
 
     S.showPreview=true;
     document.getElementById('admin-view').style.display='none';
@@ -751,7 +801,8 @@ async function runGenerate(){
 function renderPreview(){
   var cp=S.copy;var br=S.brand;var c=rgb(br);
   var bl2='rgba('+c.r+','+c.g+','+c.b+',0.10)';
-  var heroStyle=S.heroImg?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+S.heroImg+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
+  var R=resolveImages();
+  var heroStyle=R.hero?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+R.hero+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
   var lines=schedLines();
   var infoRows=[['위치',v('f-addr')]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
@@ -759,7 +810,7 @@ function renderPreview(){
   // Why Us: 2열 그리드 레이아웃
   var strItems='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
     +(cp.strengths||[]).map(function(st,i){
-      var wi=S.whyImgs&&S.whyImgs[i];
+      var wi=R.why[i];
       return '<div style="display:flex;flex-direction:column;gap:10px">'
         +(wi?'<img src="'+wi+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block">':'')
         +'<div>'
@@ -801,18 +852,59 @@ function renderPreview(){
       +infoRows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')
     +'</div>'
     +'<div class="p-sec">'
-      +(S.aboutImg
+      +(R.about
         ?'<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:0">'
-          +'<img src="'+S.aboutImg+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0">'
+          +'<img src="'+R.about+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0">'
           +'<div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
           +'</div>'
         :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p>'
       )+'</div>'
     +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+strItems+'</div>'
+    +(R.gallery.length
+      ?'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Gallery</div><div class="s-ttl">병원 둘러보기</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
+        +R.gallery.map(function(src){return '<img src="'+src+'" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block">';}).join('')
+        +'</div></div>'
+      :'')
     +'<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)"><div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+cp.ai_section_title+'</div><p class="s-body">'+cp.ai_section_body+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+aiBadges+'</div></div>'
     +dirSecs
     +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+cp.cta_text+'</button></div>'
     +'<div class="pg-ft"><span>AiU Care · WiseAI</span><span>aiu-care.kr</span></div>';
+}
+
+var PHOTO_GROUPS=[
+  {key:'internal',icon:'🏠',label:'병원 내부 사진',hint:'대기실·진료실·복도 등 내부 공간'},
+  {key:'external',icon:'🏢',label:'병원 외부 사진',hint:'건물 외관·입구·간판 등'},
+  {key:'strength',icon:'⭐',label:'강점·정보 사진',hint:'장비·인증서·시술 전후 등 특장점'}
+];
+function renderPhotos(){
+  var el=document.getElementById('photo-groups');if(!el)return;
+  el.innerHTML=PHOTO_GROUPS.map(function(g){
+    var arr=S.photos[g.key]||[];
+    var thumbs=arr.map(function(src,i){
+      return '<div class="photo-thumb"><img src="'+src+'"><button class="photo-del" data-g="'+g.key+'" data-i="'+i+'">✕</button></div>';
+    }).join('');
+    return '<div class="photo-group">'
+      +'<div class="pgh"><span class="pgh-ico">'+g.icon+'</span><div><div class="pgh-name">'+g.label+'</div><div class="pgh-hint">'+g.hint+'</div></div><span class="pgh-count">'+arr.length+'장</span></div>'
+      +'<div class="photo-grid">'+thumbs
+        +'<div class="photo-add" data-g="'+g.key+'"><span style="font-size:20px;line-height:1">+</span><span>추가</span></div>'
+      +'</div>'
+      +'<input type="file" class="photo-inp" data-g="'+g.key+'" accept="image/*" multiple style="display:none">'
+    +'</div>';
+  }).join('');
+  el.querySelectorAll('.photo-add').forEach(function(b){
+    b.addEventListener('click',function(){el.querySelector('.photo-inp[data-g="'+this.dataset.g+'"]').click();});
+  });
+  el.querySelectorAll('.photo-inp').forEach(function(inp){
+    inp.addEventListener('change',async function(){
+      var g=this.dataset.g,files=Array.prototype.slice.call(this.files||[]);
+      for(var i=0;i<files.length;i++){var src=await readFile(files[i]);S.photos[g].push(src);}
+      this.value='';renderPhotos();
+    });
+  });
+  el.querySelectorAll('.photo-del').forEach(function(b){
+    b.addEventListener('click',function(){S.photos[this.dataset.g].splice(parseInt(this.dataset.i,10),1);renderPhotos();});
+  });
 }
 
 function renderAll(){
@@ -821,6 +913,7 @@ function renderAll(){
   renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
   renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
   renderDirectors();
+  renderPhotos();
 }
 
 document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){switchTab(this.dataset.sec);});});
