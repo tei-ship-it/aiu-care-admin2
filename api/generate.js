@@ -8,13 +8,19 @@ export default async function handler(req, res) {
   const { type, ...body } = req.body;
 
   try {
-    if (type === 'copy') {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: 'Claude API 키가 설정되지 않았습니다' });
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+if (type === 'image') {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt: body.prompt,
+          n: 1,
+          size: '1536x1024',
+          quality: 'standard'
+        }),
       });
       const data = await response.json();
       return res.status(response.status).json(data);
