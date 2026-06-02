@@ -113,6 +113,13 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 .h-eye{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .h-eye::before{content:"";width:18px;height:1px;background:rgba(255,255,255,.28);display:inline-block}
 .h-div{width:28px;height:1px;background:rgba(255,255,255,.22);margin-bottom:16px}
+.hero-center{text-align:center}
+.hero-center .h-inner{display:flex;flex-direction:column;align-items:center}
+.h-logo{margin-bottom:14px}
+.hero-center .h-eye{justify-content:center}
+.hero-center .h-eye::before{display:none}
+.hero-center .h-div{margin-left:auto;margin-right:auto}
+.hero-center .h-slogan,.hero-center .h-sub{max-width:92%}
 .h-slogan{font-family:var(--tf);font-size:13px;color:rgba(255,255,255,.78);line-height:1.75;font-style:italic;margin-bottom:10px}
 .h-sub{font-size:11px;font-weight:300;color:rgba(255,255,255,.6);margin-bottom:24px}
 .h-cta{display:inline-flex;align-items:center;gap:7px;background:#fff;font-size:11px;font-weight:700;padding:10px 20px;border-radius:2px;border:none;cursor:pointer}
@@ -690,28 +697,32 @@ function resolveImages(){
     gallery:p.gallery
   };
 }
+var DEPT_EN={
+  internal:'internal medicine clinic',dental:'dental clinic',skin:'dermatology skin clinic',
+  plastic:'plastic surgery cosmetic clinic',eye:'ophthalmology eye clinic',ortho:'orthopedic clinic',
+  ent:'ENT (ear nose throat) clinic',ob:'obstetrics and gynecology clinic',ped:'pediatric clinic',
+  neuro:'neurology and psychiatry clinic',urology:'urology clinic',family:'family medicine clinic'
+};
 function buildPrompt(section, extra){
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
-  var dn=dept?dept.label:'의료';
-  var sp=S.specialties.slice(0,2).join(', ')||dn;
+  var den=(S.dept&&DEPT_EN[S.dept])||'general medical clinic';
+  var sp=S.specialties.slice(0,2).join(', ')||(dept?dept.label:'');
   var toneMap={trust:'clean professional trustworthy',warm:'warm welcoming friendly',expert:'high-tech sophisticated medical',modern:'modern minimalist contemporary',friendly:'bright cheerful approachable'};
   var tk=toneMap[S.tones[0]]||'professional';
-  var base='Korean hospital clinic. '+tk+' style. Include people only when it suits the scene and copy — at most a few hands in the foreground or a single distant blurred silhouette, never identifiable faces or portraits; if people do not fit, show the space or objects with no people at all. No text, letters, words, captions, signage, or logos anywhere in the image — a purely visual scene. Photorealistic high quality interior photo.';
-
-  // 카피 기반 프롬프트
+  var notDental=(S.dept!=='dental')?(' This is a '+den+', NOT a dental clinic — absolutely no dental chairs, no dentist equipment, no teeth or tooth imagery.'):'';
+  var base='Korean '+den+'. '+tk+' style. Include people only when it suits the scene — at most a few hands in the foreground or a single distant blurred silhouette, never identifiable faces or portraits; if people do not fit, show the space or objects with no people at all. No text, letters, words, captions, signage, or logos anywhere in the image — a purely visual scene.'+notDental+' Photorealistic high quality interior photo.';
   var cp=S.copy;
-
   if(section==='hero'){
-    var heroCtx=cp?cp.slogan+' '+cp.hero_subtext:'';
-    return 'Modern '+dn+' clinic lobby or corridor. '+sp+'. '+tk+'. Mood reference only, do NOT render these words as text in the image: '+heroCtx+'. '+base;
+    var heroCtx=cp?((cp.slogan||'')+' '+(cp.hero_subtext||'')):'';
+    return 'Modern '+den+' lobby or corridor. '+sp+'. '+tk+'. Mood reference only, do NOT render these words as text in the image: '+heroCtx+'. '+base;
   }
   if(section==='about'){
     var aboutCtx=cp?cp.about_intro:'trustworthy medical consultation';
-    return 'Medical consultation room scene. Mood reference only, do NOT render as text: '+aboutCtx+'. '+dn+' clinic. Soft warm lighting, professional atmosphere. '+base;
+    return 'Consultation room scene in a '+den+'. Mood reference only, do NOT render as text: '+aboutCtx+'. Soft warm lighting, professional atmosphere. '+base;
   }
   if(section==='why'){
     var whyCtx=extra||'medical clinic feature';
-    return 'A '+dn+' clinic scene that visually represents this strength. Mood reference only, do NOT render any of these words as text in the image: '+whyCtx+'. Close-up or detail shot. '+tk+'. '+base;
+    return 'A '+den+' scene that visually represents this strength. Mood reference only, do NOT render any of these words as text in the image: '+whyCtx+'. Close-up or detail shot. '+tk+'. '+base;
   }
   return base;
 }
@@ -726,6 +737,7 @@ async function genImg(prompt, size){
   return data.data&&data.data[0]&&data.data[0].url;
 }
 async function generateDalleImage(){
+  if(!S.dept){alert('먼저 ③ 진료·톤 탭에서 진료과를 선택해주세요.\n진료과가 없으면 엉뚱한 과(예: 치과) 이미지가 생성될 수 있습니다.');return;}
   var btn=document.getElementById('dalle-hero-btn');
   var statusEl=document.getElementById('dalle-hero-status');
   if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중...';}
@@ -745,6 +757,7 @@ async function generateDalleImage(){
 async function runGenerate(){
 
   var btn=document.getElementById('gen-btn');
+  if(!S.dept){alert('먼저 ③ 진료·톤 탭에서 진료과를 선택해주세요.');return;}
   btn.textContent='⏳ 생성 중...';btn.disabled=true;
   document.getElementById('err-bar').style.display='none';
 
@@ -872,8 +885,10 @@ function renderPreview(){
   var sec={
     hero:function(e){
       var hs=R.hero?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+R.hero+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
-      return '<div class="p-hero" style="'+hs+'">'+reroll('hero')+'<div class="h-inner">'
-        +'<div class="h-lname">'+(S.logoImg?'<img src="'+S.logoImg+'" style="height:40px;object-fit:contain;filter:brightness(0) invert(1);opacity:.9">':'')+'<div><div class="h-eye">'+eyebrow+'</div><div class="h-hosp">'+v('f-name')+'</div></div></div>'
+      return '<div class="p-hero hero-center" style="'+hs+'">'+reroll('hero')+'<div class="h-inner">'
+        +(S.logoImg?'<div class="h-logo"><img src="'+S.logoImg+'" style="height:48px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95"></div>':'')
+        +'<div class="h-eye">'+eyebrow+'</div>'
+        +'<div class="h-hosp">'+v('f-name')+'</div>'
         +'<div class="h-div"></div><div class="h-slogan">'+(cp.slogan||'')+'</div>'
         +'<div class="h-sub">'+(cp.hero_subtext||'')+'</div>'
         +'<button class="h-cta" style="color:'+br+'">'+(cp.cta_text||'자세히 보기')+' →</button>'
