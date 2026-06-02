@@ -141,6 +141,11 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 .pg-ft span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#aaa}
 .map-box{width:100%;height:250px;overflow:hidden}
 .map-box iframe{width:100%;height:100%;border:none;display:block}
+.p-sec,.ai-sec,.cta-ft{position:relative}
+.reroll{position:absolute;top:8px;right:8px;z-index:5;display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:3px 9px;border-radius:14px;border:none;cursor:pointer;background:rgba(255,255,255,.92);color:#555;box-shadow:0 1px 3px rgba(0,0,0,.18);font-family:'Noto Sans KR',sans-serif}
+.reroll:hover{background:#fff}
+.reroll:disabled{opacity:.55;cursor:wait}
+@media print{.reroll{display:none!important}}
 </style>
 </head>
 <body>
@@ -749,7 +754,7 @@ async function runGenerate(){
   var deptLabel=S.dept?((DEPTS.find(function(d){return d.id===S.dept;})||{}).label||''):'';
 
   var sys='당신은 의료기관 전문 카피라이터입니다. 에이유케어 게이트웨이 병원 소개 페이지 텍스트를 생성합니다.\n규칙: 1.과장·허위 표현 금지 2.'+toneLabel+' 문체 유지 3.순수 JSON만 출력(코드블록 없이)';
-  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내"}';
+  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내","layout":{"order":["hero","info","about","why","gallery","ai","directors","cta"],"emphasis":["why"]}} layout.order는 위 id만으로 페이지 구성·순서를 병원 톤·강점·타겟에 맞게 정하고(hero는 처음, cta는 마지막), map은 지도·gallery는 사진 섹션. layout.emphasis는 강조할 섹션 id를 0~2개.';
 
   try{
     var res=await fetch('/api/generate',{
@@ -800,80 +805,138 @@ async function runGenerate(){
   }finally{btn.textContent='✦ AI 카피 생성 & 미리보기';btn.disabled=false;}
 }
 
+function gatherInputs(){
+  var toneLabel=S.tones.map(function(id){var t=TONES.find(function(x){return x.id===id;});return t?t.label:'';}).filter(Boolean).join(', ')||'신뢰감';
+  var featLabels=FEATURES.filter(function(f){return S.features.indexOf(f.id)>=0;}).map(function(f){return f.label;}).join(', ');
+  var dirInfo=S.directors.map(function(d){return d.name+' '+d.title+(d.careerText?'('+d.careerText.split('\n').slice(0,2).join(', ')+')':'');}).join(' / ');
+  var deptLabel=S.dept?((DEPTS.find(function(d){return d.id===S.dept;})||{}).label||''):'';
+  var ctx='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels;
+  return {toneLabel:toneLabel,ctx:ctx};
+}
+function copySystem(toneLabel){
+  return '당신은 의료기관 전문 카피라이터입니다. 에이유케어 게이트웨이 병원 소개 페이지 텍스트를 생성합니다.\n규칙: 1.과장·허위 표현 금지 2.'+toneLabel+' 문체 유지 3.순수 JSON만 출력(코드블록 없이)';
+}
+async function callCopy(sys,usr){
+  var res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type:'copy',model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})});
+  if(!res.ok){var e=await res.json().catch(function(){return{};});throw new Error(e.error?e.error.message:'API '+res.status);}
+  var data=await res.json();
+  return JSON.parse(data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim());
+}
+var SECTION_SCHEMA={
+  hero:'{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내"}',
+  about:'{"about_intro":"80~120자"}',
+  why:'{"strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}]}',
+  ai:'{"ai_section_title":"20자이내","ai_section_body":"60~80자"}',
+  directors:'{"director_quote":"50~70자"}',
+  cta:'{"cta_text":"10자이내"}'
+};
+async function regenSection(id,btn){
+  if(!S.copy||!SECTION_SCHEMA[id])return;
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  var g=gatherInputs();
+  var usr=g.ctx+'\n\n기존 톤·맥락을 유지하되 아래 항목만 새롭게 다시 작성해 순수 JSON으로만 출력:\n'+SECTION_SCHEMA[id];
+  try{
+    var partial=await callCopy(copySystem(g.toneLabel),usr);
+    Object.keys(partial).forEach(function(k){S.copy[k]=partial[k];});
+    renderPreview();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='🔄 다시';}
+    alert('다시 생성 실패: '+e.message);
+  }
+}
+function computeLayoutOrder(){
+  var L=(S.copy&&S.copy.layout)||{};
+  var order=Array.isArray(L.order)?L.order.slice():[];
+  var emph=Array.isArray(L.emphasis)?L.emphasis:[];
+  var valid=['hero','map','info','about','why','gallery','ai','directors','cta'];
+  var seen={},out=[];
+  order.forEach(function(id){if(valid.indexOf(id)>=0&&!seen[id]){seen[id]=1;out.push(id);}});
+  out=out.filter(function(id){return id!=='hero';});out.unshift('hero');
+  out=out.filter(function(id){return id!=='cta';});out.push('cta');
+  if(out.length<=2)out=['hero','map','info','about','why','gallery','ai','directors','cta'];
+  return out.map(function(id){return {id:id,emphasis:emph.indexOf(id)>=0};});
+}
 function renderPreview(){
-  var cp=S.copy;var br=S.brand;var c=rgb(br);
+  var cp=S.copy||{};var br=S.brand;var c=rgb(br);
   var bl2='rgba('+c.r+','+c.g+','+c.b+',0.10)';
   var R=resolveImages();
-  var heroStyle=R.hero?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+R.hero+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
-  var lines=schedLines();
-  var infoRows=[['위치',v('f-addr')]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
+  var addr=v('f-addr');
   var dept=DEPTS.find(function(d){return d.id===S.dept;});
   var eyebrow=dept?dept.label+(S.specialties.length?' · '+S.specialties.slice(0,1).join(''):''):'';
-  // Why Us: 2열 그리드 레이아웃
-  var strItems='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
-    +(cp.strengths||[]).map(function(st,i){
-      var wi=R.why[i];
-      return '<div style="display:flex;flex-direction:column;gap:10px">'
-        +(wi?'<img src="'+wi+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block">':'')
-        +'<div>'
-          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-            +'<span class="str-num" style="color:'+br+'">0'+(i+1)+'</span>'
-            +'<div class="str-ttl">'+st.title+'</div>'
-          +'</div>'
-          +'<div class="str-desc">'+st.desc+'</div>'
-        +'</div>'
-      +'</div>';
-    }).join('')
-    +'</div>';
-  var aiBadges=FEATURES.filter(function(f){return S.features.indexOf(f.id)>=0;}).map(function(f){return '<span class="ai-bdg" style="background:rgba('+c.r+','+c.g+','+c.b+',0.1);color:'+br+';border:1px solid rgba('+c.r+','+c.g+','+c.b+',0.15)">'+f.label+'</span>';}).join(' ');
-  var addr=v('f-addr');
-  var dirSecs=S.directors.map(function(d,i){
-    var lns=(d.careerText||'').split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
-    var qt=i===0?cp.director_quote:d.comment;
-    var ph=d.photo?'<img src="'+d.photo+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<div style="width:64px;height:64px;border-radius:50%;background:'+bl2+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👤</div>';
-    return '<div class="quote-sec">'
-      +'<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'+ph+'<div style="width:3px;background:'+br+';flex:1;border-radius:2px;min-height:30px;margin-top:6px"></div></div>'
-      +'<div style="flex:1"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:4px">'+(d.title||'원장')+'</div>'
-      +'<div style="font-family:var(--tf);font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:8px">'+d.name+'</div>'
-      +(lns.length?'<div style="margin-bottom:10px">'+lns.map(function(l){return '<div style="padding:4px 0;border-bottom:0.5px solid rgba(0,0,0,.05);font-size:11px;color:#5a5a5a">'+l+'</div>';}).join('')+'</div>':'')
-      +(qt?'<div class="q-text">"'+qt+'"</div>':'')
-      +'<div class="q-attr"><span style="color:'+br+'">'+d.name+'</span> '+(d.title||'원장')+' · '+v('f-name')+'</div></div>'
-    +'</div>';
-  }).join('');
-
+  function reroll(id){return '<button class="reroll" data-html2canvas-ignore="true" onclick="regenSection(\''+id+'\',this)">🔄 다시</button>';}
+  function bg(e){return e?('background:'+bl2+';'):'';}
+  var sec={
+    hero:function(e){
+      var hs=R.hero?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+R.hero+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
+      return '<div class="p-hero" style="'+hs+'">'+reroll('hero')+'<div class="h-inner">'
+        +'<div class="h-lname">'+(S.logoImg?'<img src="'+S.logoImg+'" style="height:40px;object-fit:contain;filter:brightness(0) invert(1);opacity:.9">':'')+'<div><div class="h-eye">'+eyebrow+'</div><div class="h-hosp">'+v('f-name')+'</div></div></div>'
+        +'<div class="h-div"></div><div class="h-slogan">'+(cp.slogan||'')+'</div>'
+        +'<div class="h-sub">'+(cp.hero_subtext||'')+'</div>'
+        +'<button class="h-cta" style="color:'+br+'">'+(cp.cta_text||'자세히 보기')+' →</button>'
+      +'</div></div>';
+    },
+    map:function(e){return addr?'<div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div>':'';},
+    info:function(e){
+      var lines=schedLines();
+      var rows=[['위치',addr]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
+      if(!addr&&!lines.length)return '';
+      return '<div class="p-sec" style="'+bg(e)+'"><div class="s-eye" style="color:'+br+'">Information</div><div class="s-ttl">진료 안내</div>'
+        +rows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')+'</div>';
+    },
+    about:function(e){
+      if(!cp.about_intro)return '';
+      var body=R.about
+        ?'<div style="display:flex;gap:20px;align-items:flex-start"><img src="'+R.about+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0"><div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div></div>'
+        :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p>';
+      return '<div class="p-sec" style="'+bg(e)+'">'+reroll('about')+body+'</div>';
+    },
+    why:function(e){
+      var sts=cp.strengths||[];if(!sts.length)return '';
+      var items='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+sts.map(function(st,i){
+        var wi=R.why[i];
+        return '<div style="display:flex;flex-direction:column;gap:10px">'+(wi?'<img src="'+wi+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block">':'')
+          +'<div><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="str-num" style="color:'+br+'">0'+(i+1)+'</span><div class="str-ttl">'+(st.title||'')+'</div></div><div class="str-desc">'+(st.desc||'')+'</div></div></div>';
+      }).join('')+'</div>';
+      return '<div class="p-sec" style="'+bg(e)+'">'+reroll('why')+'<div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+items+'</div>';
+    },
+    gallery:function(e){
+      if(!R.gallery.length)return '';
+      return '<div class="p-sec" style="'+bg(e)+'"><div class="s-eye" style="color:'+br+'">Gallery</div><div class="s-ttl">병원 둘러보기</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'+R.gallery.map(function(src){return '<img src="'+src+'" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block">';}).join('')+'</div></div>';
+    },
+    ai:function(e){
+      if(!cp.ai_section_title&&!cp.ai_section_body)return '';
+      var badges=FEATURES.filter(function(f){return S.features.indexOf(f.id)>=0;}).map(function(f){return '<span class="ai-bdg" style="background:rgba('+c.r+','+c.g+','+c.b+',0.1);color:'+br+';border:1px solid rgba('+c.r+','+c.g+','+c.b+',0.15)">'+f.label+'</span>';}).join(' ');
+      return '<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)">'+reroll('ai')+'<div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+(cp.ai_section_title||'')+'</div><p class="s-body">'+(cp.ai_section_body||'')+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+badges+'</div></div>';
+    },
+    directors:function(e){
+      if(!S.directors.length)return '';
+      var inner=S.directors.map(function(d,i){
+        var lns=(d.careerText||'').split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
+        var qt=i===0?cp.director_quote:d.comment;
+        var ph=d.photo?'<img src="'+d.photo+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<div style="width:64px;height:64px;border-radius:50%;background:'+bl2+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👤</div>';
+        return '<div class="quote-sec">'
+          +'<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'+ph+'<div style="width:3px;background:'+br+';flex:1;border-radius:2px;min-height:30px;margin-top:6px"></div></div>'
+          +'<div style="flex:1"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:4px">'+(d.title||'원장')+'</div>'
+          +'<div style="font-family:var(--tf);font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:8px">'+d.name+'</div>'
+          +(lns.length?'<div style="margin-bottom:10px">'+lns.map(function(l){return '<div style="padding:4px 0;border-bottom:0.5px solid rgba(0,0,0,.05);font-size:11px;color:#5a5a5a">'+l+'</div>';}).join('')+'</div>':'')
+          +(qt?'<div class="q-text">"'+qt+'"</div>':'')
+          +'<div class="q-attr"><span style="color:'+br+'">'+d.name+'</span> '+(d.title||'원장')+' · '+v('f-name')+'</div></div>'
+        +'</div>';
+      }).join('');
+      return '<div style="position:relative;'+bg(e)+'">'+reroll('directors')+inner+'</div>';
+    },
+    cta:function(e){
+      return '<div class="cta-ft">'+reroll('cta')+'<div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+(cp.cta_text||'자세히 보기')+'</button></div>';
+    }
+  };
+  var order=computeLayoutOrder();
+  var bodyHtml=order.map(function(o){var fn=sec[o.id];return fn?fn(o.emphasis):'';}).join('');
   document.getElementById('capture-page').innerHTML=
     '<div class="p-hdr" style="background:'+br+'"><span class="wm">AiU Care</span><span class="bdg">AI 솔루션 도입 병원</span></div>'
-    +'<div class="p-hero" style="'+heroStyle+'"><div class="h-inner">'
-      +'<div class="h-lname">'+(S.logoImg?'<img src="'+S.logoImg+'" style="height:40px;object-fit:contain;filter:brightness(0) invert(1);opacity:.9">':'')+'<div><div class="h-eye">'+eyebrow+'</div><div class="h-hosp">'+v('f-name')+'</div></div></div>'
-      +'<div class="h-div"></div><div class="h-slogan">'+cp.slogan+'</div>'
-      +'<div class="h-sub">'+cp.hero_subtext+'</div>'
-      +'<button class="h-cta" style="color:'+br+'">'+cp.cta_text+' →</button>'
-    +'</div></div>'
-    +(addr?'<div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div>':'')
-    +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Information</div><div class="s-ttl">진료 안내</div>'
-      +infoRows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')
-    +'</div>'
-    +'<div class="p-sec">'
-      +(R.about
-        ?'<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:0">'
-          +'<img src="'+R.about+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0">'
-          +'<div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div>'
-          +'</div>'
-        :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p>'
-      )+'</div>'
-    +'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+strItems+'</div>'
-    +(R.gallery.length
-      ?'<div class="p-sec"><div class="s-eye" style="color:'+br+'">Gallery</div><div class="s-ttl">병원 둘러보기</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
-        +R.gallery.map(function(src){return '<img src="'+src+'" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block">';}).join('')
-        +'</div></div>'
-      :'')
-    +'<div class="ai-sec" style="background:'+bl2+';border-bottom:1px solid rgba(0,0,0,.07)"><div class="s-eye" style="color:'+br+'">AI Service</div><div class="s-ttl" style="margin-bottom:8px">'+cp.ai_section_title+'</div><p class="s-body">'+cp.ai_section_body+'</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px">'+aiBadges+'</div></div>'
-    +dirSecs
-    +'<div class="cta-ft"><div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+cp.cta_text+'</button></div>'
+    +bodyHtml
     +'<div class="pg-ft"><span>AiU Care · WiseAI</span><span>aiu-care.kr</span></div>';
 }
-
 var PHOTO_GROUPS=[
   {key:'internal',icon:'🏠',label:'병원 내부 사진',hint:'대기실·진료실·복도 등 내부 공간'},
   {key:'external',icon:'🏢',label:'병원 외부 사진',hint:'건물 외관·입구·간판 등'},
