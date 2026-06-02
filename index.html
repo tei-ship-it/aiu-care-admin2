@@ -649,16 +649,14 @@ function buildDallePrompt(){
   return 'A '+tk+' '+dn+' hospital interior photograph. Modern '+sp+' medical clinic. Bright, clean, no people, no text, no logos. Horizontal format, high quality.';
 }
 async function generateDalleImage(){
-  var key=document.getElementById('dalle-key').value.trim()||S.dalleKey;
-  if(!key){alert('② 브랜딩 탭에서 OpenAI API 키를 먼저 입력해주세요');return;}
   var btn=document.getElementById('dalle-hero-btn');
   var statusEl=document.getElementById('dalle-hero-status');
   if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중...';}
   if(statusEl){statusEl.style.display='block';statusEl.textContent='🎨 DALL·E 3로 이미지 생성 중... (약 10~20초)';}
   try{
-    var res=await fetch('https://api.openai.com/v1/images/generations',{
-      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
+    var res=await fetch('/api/generate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'image',model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
     });
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'생성 실패');}
     var data=await res.json();
@@ -691,20 +689,19 @@ async function generate(){
     var res=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})
+      body:JSON.stringify({type:'copy',model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})
     });
     if(!res.ok){var e=await res.json().catch(function(){return{};});throw new Error(e.error?e.error.message:'API '+res.status);}
     var data=await res.json();
     S.copy=JSON.parse(data.content.map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim());
 
     if(!S.heroImg){
-      var dk=document.getElementById('dalle-key').value.trim()||S.dalleKey;
-      if(dk){
+      {
         btn.textContent='⏳ AI 이미지 생성 중...';
         try{
-          var dr=await fetch('https://api.openai.com/v1/images/generations',{
-            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dk},
-            body:JSON.stringify({model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
+          var dr=await fetch('/api/generate',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({type:'image',model:'dall-e-3',prompt:buildDallePrompt(),n:1,size:'1792x1024',quality:'standard',response_format:'url'})
           });
           if(dr.ok){var dd=await dr.json();var iu=dd.data&&dd.data[0]&&dd.data[0].url;if(iu){S.heroImg=iu;renderHeroWrap();}}
         }catch(e){}
