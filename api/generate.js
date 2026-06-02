@@ -20,13 +20,19 @@ export default async function handler(req, res) {
       return res.status(response.status).json(data);
     }
 
-    if (type === 'image') {
+if (type === 'image') {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          model: body.model || 'dall-e-3',
+          prompt: body.prompt,
+          n: 1,
+          size: '1792x1024',
+          quality: 'standard'
+        }),
       });
       const data = await response.json();
       return res.status(response.status).json(data);
