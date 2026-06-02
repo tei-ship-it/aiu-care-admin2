@@ -1,6 +1,7 @@
 {
-  "name": "aiu-care-admin",
-  "version": "1.0.0",
-  "description": "AiU Care 병원 상세페이지 어드민",
-  "engines": { "node": "24.x" }
+  "version": 2,
+  "routes": [
+    { "src": "/api/generate", "dest": "/generate.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
