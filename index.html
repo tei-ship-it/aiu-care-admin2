@@ -711,7 +711,7 @@ function buildPrompt(section, extra){
   }
   if(section==='why'){
     var whyCtx=extra||'medical clinic feature';
-    return 'Hospital scene representing "'+whyCtx+'" in a '+dn+' clinic. Close-up detail shot. '+tk+'. '+base;
+    return 'A '+dn+' clinic scene that visually represents this strength. Mood reference only, do NOT render any of these words as text in the image: '+whyCtx+'. Close-up or detail shot. '+tk+'. '+base;
   }
   return base;
 }
@@ -768,7 +768,7 @@ async function runGenerate(){
 
     // 이미지 생성 — 강점 사진이 채운 Why Us 칸은 건너뛰고, About과 빈 칸만 AI로 생성
     var cp2=S.copy;
-    var whyTitles=(cp2.strengths||[]).map(function(s){return s.title||'clinic';});
+    var whyCtx=(cp2.strengths||[]).map(function(s){var t=s.title||'';var d=s.desc||'';return (t&&d)?(t+' — '+d):(t||d||'clinic');});
     var plan=imagePlan();
     var needAbout=!S.aboutImg;
     var whyNeed=plan.whyUp.map(function(u){return !u;});
@@ -776,10 +776,10 @@ async function runGenerate(){
     btn.textContent=genCount?('⏳ AI 이미지 생성 중... ('+genCount+'장, 최대 1~2분)'):'⏳ 미리보기 준비 중...';
     var imgPromises=[
       needAbout?genImg(buildPrompt('about'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[0]?genImg(buildPrompt('why',whyTitles[0]||'medical'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[1]?genImg(buildPrompt('why',whyTitles[1]||'equipment'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[2]?genImg(buildPrompt('why',whyTitles[2]||'consultation'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[3]?genImg(buildPrompt('why',whyTitles[3]||'clinic'),'1024x1024').catch(function(){return null;}):Promise.resolve(null)
+      whyNeed[0]?genImg(buildPrompt('why',whyCtx[0]||'medical'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[1]?genImg(buildPrompt('why',whyCtx[1]||'equipment'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[2]?genImg(buildPrompt('why',whyCtx[2]||'consultation'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
+      whyNeed[3]?genImg(buildPrompt('why',whyCtx[3]||'clinic'),'1024x1024').catch(function(){return null;}):Promise.resolve(null)
     ];
     var imgs=await Promise.all(imgPromises);
     if(imgs[0]&&needAbout)S.aboutImg=imgs[0];
@@ -854,11 +854,10 @@ function computeLayoutOrder(){
   order.forEach(function(id){if(valid.indexOf(id)>=0&&!seen[id]){seen[id]=1;out.push(id);}});
   out=out.filter(function(id){return id!=='hero';});out.unshift('hero');
   out=out.filter(function(id){return id!=='cta';});out.push('cta');
-  if(out.length<=2)out=['hero','info','map','about','why','gallery','ai','directors','cta'];
-  // 지도(찾아오는 길)는 항상 진료안내(info) 바로 아래에 배치 (info 없으면 hero 다음)
-  out=out.filter(function(id){return id!=='map';});
-  var anchor=out.indexOf('info');if(anchor<0)anchor=out.indexOf('hero');
-  out.splice(anchor+1,0,'map');
+  if(out.length<=2)out=['hero','about','why','gallery','ai','directors','info','map','cta'];
+  // 진료안내(info)·찾아오는 길(map)은 항상 CTA 바로 위에 고정 (… → info → map → cta)
+  out=out.filter(function(id){return id!=='info'&&id!=='map';});
+  var ci=out.indexOf('cta');if(ci<0){out.push('info','map','cta');}else{out.splice(ci,0,'info','map');}
   return out.map(function(id){return {id:id,emphasis:emph.indexOf(id)>=0};});
 }
 function renderPreview(){
