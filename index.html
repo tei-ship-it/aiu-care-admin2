@@ -177,17 +177,15 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
   <div class="tab" data-sec="clinic">③ 진료정보</div>
   <div class="tab" data-sec="ai">④ AI 현황</div>
   <div class="tab" data-sec="tone">⑤ 톤 설정</div>
-  <div class="tab" data-sec="photos">⑥ 사진</div>
+  <div class="tab" data-sec="copy">⑥ 문구</div>
+  <div class="tab" data-sec="photos">⑦ 사진</div>
 </div>
 
 <!-- ① 기본정보 -->
 <div id="sec-basic">
   <div class="card">
     <div class="card-title">병원 기본정보</div>
-    <div class="r2">
-      <div class="f"><label class="lbl">병원명<span class="req">*</span></label><span class="ex">예: 강남연세내과의원</span><input class="inp" id="f-name" value="서울연세내과의원"></div>
-      <div class="f"><label class="lbl">대표원장명<span class="req">*</span></label><span class="ex">복수 원장은 ③에서 설정</span><input class="inp" id="f-director" value="김민준"></div>
-    </div>
+    <div class="f" style="margin-bottom:10px"><label class="lbl">병원명<span class="req">*</span></label><span class="ex">예: 강남연세내과의원</span><input class="inp" id="f-name" value="서울연세내과의원"></div>
     <div class="f" style="margin-bottom:10px"><label class="lbl">주소<span class="req">*</span></label><span class="ex">예: 서울 강남구 테헤란로 123, 5층</span><input class="inp" id="f-addr" value="서울 강남구 테헤란로 123, 5층"></div>
     <label class="lbl" style="margin-bottom:8px">요일별 진료시간<span class="req">*</span></label>
     <div class="sched-table">
@@ -200,6 +198,12 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
       </div>
     </div>
     <span style="font-size:10px;color:#aaa;margin-top:3px;display:block">토글을 끄면 해당 요일은 "휴진"으로 표시됩니다</span>
+  </div>
+  <div class="card">
+    <div class="card-title">원장 관리</div>
+    <span class="ex" style="margin-bottom:10px">원장 1이 대표원장으로 사용되며, 프로필은 상세페이지 하단에 표시됩니다</span>
+    <div id="director-list"></div>
+    <button class="add-dir-btn" onclick="addDirector()"><span style="font-size:16px">+</span> 원장 추가</button>
   </div>
 </div>
 
@@ -222,15 +226,12 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
       </div>
     </div>
     <!-- 컬러·슬로건 -->
-    <div class="r2" style="margin-bottom:14px">
-      <div class="f"><label class="lbl">대표 컬러<span class="req">*</span></label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div id="swatch" style="width:34px;height:34px;border-radius:8px;background:#1A6FA8;border:0.5px solid #ddd;cursor:pointer;flex-shrink:0" onclick="document.getElementById('cp').click()"></div>
-          <input type="color" id="cp" value="#1A6FA8" style="position:absolute;opacity:0;pointer-events:none">
-          <input class="inp" id="color-hex" value="#1A6FA8" style="width:100px">
-        </div>
+    <div class="f" style="margin-bottom:14px"><label class="lbl">대표 컬러<span class="req">*</span></label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="swatch" style="width:34px;height:34px;border-radius:8px;background:#1A6FA8;border:0.5px solid #ddd;cursor:pointer;flex-shrink:0" onclick="document.getElementById('cp').click()"></div>
+        <input type="color" id="cp" value="#1A6FA8" style="position:absolute;opacity:0;pointer-events:none">
+        <input class="inp" id="color-hex" value="#1A6FA8" style="width:100px">
       </div>
-      <div class="f"><label class="lbl">병원 슬로건</label><span class="ex">미입력 시 AI 자동 생성</span><input class="inp" id="f-slogan" placeholder="미입력 시 AI 자동 생성"></div>
     </div>
     <!-- 폰트 -->
     <div style="margin-bottom:14px">
@@ -282,14 +283,6 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
         <button id="add-spec-btn" style="font-size:12px;padding:7px 14px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:500;background:#1A6FA8;flex-shrink:0" onclick="addCustomSpec()">+ 추가</button>
       </div>
     </div>
-    <div class="f" style="margin-bottom:10px">
-      <label class="lbl">병원 강점 · 자랑거리<span class="req">*</span></label>
-      <span class="ex">예: 원장 경력 15년, 최신 CT 보유, 당일 결과 확인, 주차 30대</span>
-      <textarea class="textarea" id="f-strengths" rows="3">원장 경력 15년, 최신 내시경 장비, 주차 30대, 당일 검사 결과 확인</textarea>
-    </div>
-    <label class="lbl" style="margin-bottom:8px">원장 관리</label><span class="ex">원장 프로필은 상세페이지 하단에 표시됩니다</span>
-    <div id="director-list"></div>
-    <button class="add-dir-btn" onclick="addDirector()"><span style="font-size:16px">+</span> 원장 추가</button>
   </div>
 </div>
 
@@ -315,12 +308,32 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
     <div class="target-group"><span class="target-group-lbl">성별</span><div class="chips" id="tg-gender"></div></div>
     <div class="target-group"><span class="target-group-lbl">연령대</span><div class="chips" id="tg-age"></div></div>
     <div class="target-group"><span class="target-group-lbl">특수</span><div class="chips" id="tg-special"></div></div>
-    <div id="target-sel" style="font-size:11px;color:#888;margin-bottom:12px"></div>
-    <div class="f"><label class="lbl">강조 메시지</label><span class="ex">예: 당일 예약 가능, 비급여 상담 무료</span><input class="inp" id="f-message" value="예약 없이도 빠른 진료 가능"></div>
+    <div id="target-sel" style="font-size:11px;color:#888;margin-bottom:0"></div>
   </div>
 </div>
 
-<!-- ⑥ 사진 -->
+<!-- ⑥ 문구 -->
+<div id="sec-copy" style="display:none">
+  <div class="card">
+    <div class="card-title">직접 작성 문구</div>
+    <span class="ex" style="margin-bottom:12px">아래 문구는 AI 카피 생성의 재료로 쓰이며 여러 섹션에 함께 반영됩니다. 비워두면 AI가 자동으로 작성합니다.</span>
+    <div class="f" style="margin-bottom:12px">
+      <label class="lbl">병원 슬로건</label><span class="ex">미입력 시 AI 자동 생성 · 히어로에 노출</span>
+      <input class="inp" id="f-slogan" placeholder="미입력 시 AI 자동 생성">
+    </div>
+    <div class="f" style="margin-bottom:12px">
+      <label class="lbl">병원 강점 · 자랑거리<span class="req">*</span></label>
+      <span class="ex">예: 원장 경력 15년, 최신 CT 보유, 당일 결과 확인, 주차 30대 · Why Us 섹션에 반영</span>
+      <textarea class="textarea" id="f-strengths" rows="3">원장 경력 15년, 최신 내시경 장비, 주차 30대, 당일 검사 결과 확인</textarea>
+    </div>
+    <div class="f">
+      <label class="lbl">강조 메시지</label><span class="ex">예: 당일 예약 가능, 비급여 상담 무료 · CTA 등에 반영</span>
+      <input class="inp" id="f-message" value="예약 없이도 빠른 진료 가능">
+    </div>
+  </div>
+</div>
+
+<!-- ⑦ 사진 -->
 <div id="sec-photos" style="display:none">
   <div class="card">
     <div class="card-title">병원 사진 업로드</div>
@@ -449,7 +462,7 @@ function applyBrand(hex){
 }
 
 function switchTab(sec){
-  ['basic','brand','clinic','ai','tone','photos'].forEach(function(s){
+  ['basic','brand','clinic','ai','tone','copy','photos'].forEach(function(s){
     document.getElementById('sec-'+s).style.display=s===sec?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(function(t){
@@ -612,7 +625,6 @@ function renderDirectors(){
   el.querySelectorAll('.dir-f').forEach(function(inp){
     inp.addEventListener('input',function(){
       var i=parseInt(this.dataset.i,10);S.directors[i][this.dataset.f]=this.value;
-      if(i===0&&this.dataset.f==='name'){var fi=document.getElementById('f-director');if(fi)fi.value=this.value;}
     });
   });
   el.querySelectorAll('input[id^="dp-"]').forEach(function(inp){
@@ -747,7 +759,7 @@ async function runGenerate(){
   var deptLabel=S.dept?((DEPTS.find(function(d){return d.id===S.dept;})||{}).label||''):'';
 
   var sys='당신은 의료기관 전문 카피라이터입니다. 에이유케어 게이트웨이 병원 소개 페이지 텍스트를 생성합니다.\n규칙: 1.과장·허위 표현 금지 2.'+toneLabel+' 문체 유지 3.순수 JSON만 출력(코드블록 없이)';
-  var usr='병원명:'+v('f-name')+'\n원장명:'+v('f-director')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내"}';
+  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내"}';
 
   try{
     var res=await fetch('/api/generate',{
