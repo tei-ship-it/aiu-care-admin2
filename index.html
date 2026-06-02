@@ -714,7 +714,7 @@ function buildPrompt(section, extra){
   var cp=S.copy;
   if(section==='hero'){
     var heroCtx=cp?((cp.slogan||'')+' '+(cp.hero_subtext||'')):'';
-    return 'Modern '+den+' lobby or corridor. '+sp+'. '+tk+'. Mood reference only, do NOT render these words as text in the image: '+heroCtx+'. '+base;
+    return 'Modern '+den+' lobby or corridor. '+sp+'. '+tk+'. Mood reference only, do NOT render these words as text in the image: '+heroCtx+'. ABSOLUTELY NO text, letters, words, Korean or English characters, clinic name, slogans, captions, brand logos, or signage anywhere in the image. '+base;
   }
   if(section==='about'){
     var aboutCtx=cp?cp.about_intro:'trustworthy medical consultation';
