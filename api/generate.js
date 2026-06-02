@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   const { type, ...body } = req.body;
 
   try {
-    // Claude 카피 생성
     if (type === 'copy') {
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'Claude API 키가 설정되지 않았습니다' });
@@ -21,7 +20,6 @@ export default async function handler(req, res) {
       return res.status(response.status).json(data);
     }
 
-    // DALL·E 이미지 생성
     if (type === 'image') {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
@@ -34,6 +32,8 @@ export default async function handler(req, res) {
       return res.status(response.status).json(data);
     }
 
-    return res.status(400).json({ error: 'type 파라미터가 필요합니다 (copy 또는 image)' });
+    return res.status(400).json({ error: 'type 파라미터가 필요합니다' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  }
+};
