@@ -41,11 +41,11 @@ module.exports = async function handler(req, res) {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'chatgpt-image-latest',
+          model: 'gpt-image-1',
           prompt: rest.prompt,
           n: 1,
           size: rest.size || '1536x1024',
-          quality: 'medium'
+          quality: 'high'
         }),
       });
       const data = await response.json();
