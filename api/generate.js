@@ -37,16 +37,21 @@ module.exports = async function handler(req, res) {
           model: 'dall-e-3',
           prompt: body.prompt,
           n: 1,
-          size: '1792x1024'
+          size: '1024x1024'
         }),
       });
       const data = await response.json();
-      // URL 또는 b64_json 처리
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.error?.message || JSON.stringify(data),
+          raw: data
+        });
+      }
       if (data.data && data.data[0] && data.data[0].b64_json) {
         data.data[0].url = 'data:image/png;base64,' + data.data[0].b64_json;
         delete data.data[0].b64_json;
       }
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
 
     return res.status(400).json({ error: 'type 파라미터가 필요합니다 (copy 또는 image)' });
