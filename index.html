@@ -520,9 +520,16 @@ function renderSchedule(){
 function toggleDay(id){S.schedule[id].open=!S.schedule[id].open;renderSchedule();}
 
 function schedLines(){
-  var g={};
-  DAYS.forEach(function(d){var day=S.schedule[d.id];if(!day.open)return;var k=day.start+'–'+day.end;if(!g[k])g[k]=[];g[k].push(d.lbl);});
-  var lines=Object.entries(g).map(function(e){return e[1].join('·')+' '+e[0];});
+  var g={},wk={};
+  DAYS.forEach(function(d){var day=S.schedule[d.id];if(!day.open)return;var k=day.start+'–'+day.end;if(!g[k]){g[k]=[];wk[k]=false;}g[k].push(d.lbl);if(d.wknd)wk[k]=true;});
+  var lines=Object.entries(g).map(function(e){
+    var k=e[0],labels=e[1];
+    var end=(k.split('–')[1]||'');
+    var tags=[];
+    if(wk[k])tags.push('주말진료');
+    if(end>='19:30')tags.push('야간진료');
+    return labels.join('·')+' '+k+(tags.length?' ('+tags.join('·')+')':'');
+  });
   var cl=DAYS.filter(function(d){return!S.schedule[d.id].open;}).map(function(d){return d.lbl;});
   if(cl.length)lines.push(cl.join('·')+' 휴진');
   lines.push('점심 '+S.schedule.lunch.start+'–'+S.schedule.lunch.end);
@@ -992,8 +999,10 @@ function renderPreview(){
     map:function(e){return addr?'<div style="'+bg(e)+'"><div style="padding:28px 28px 14px"><div class="s-eye" style="color:'+br+'">Location</div><div class="s-ttl" style="margin-bottom:0">찾아오는 길</div></div><div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div></div>':'';},
     info:function(e){
       var lines=schedLines();
-      var rows=[['위치',addr]].concat(lines.map(function(l,i){return[i===0?'진료시간':'',l];})).filter(function(r){return r[0]!=='';});
       if(!addr&&!lines.length)return '';
+      var rows=[];
+      if(addr)rows.push(['위치',addr]);
+      lines.forEach(function(l,i){rows.push([i===0?'진료시간':'',l]);});
       return '<div class="p-sec" style="'+bg(e)+'"><div class="s-eye" style="color:'+br+'">Information</div><div class="s-ttl">진료 안내</div>'
         +rows.map(function(r){return '<div class="i-row"><span class="i-key">'+r[0]+'</span><span class="i-val">'+r[1]+'</span></div>';}).join('')+'</div>';
     },
