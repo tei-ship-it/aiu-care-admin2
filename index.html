@@ -862,7 +862,7 @@ async function runGenerate(){
   var deptLabel=S.dept?((DEPTS.find(function(d){return d.id===S.dept;})||{}).label||''):'';
 
   var sys='당신은 의료기관 전문 카피라이터입니다. 에이유케어 게이트웨이 병원 소개 페이지 텍스트를 생성합니다.\n규칙: 1.과장·허위 표현 금지 2.'+toneLabel+' 문체 유지 3.순수 JSON만 출력(코드블록 없이)';
-  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내","layout":{"order":["hero","info","about","why","gallery","ai","directors","cta"],"emphasis":["why"]}} layout.order는 위 id만으로 페이지 구성·순서를 병원 톤·강점·타겟에 맞게 정하고(hero는 처음, cta는 마지막), map은 지도·gallery는 사진 섹션. layout.emphasis는 강조할 섹션 id를 0~2개.';
+  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_title":"12자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내","layout":{"order":["hero","info","about","why","gallery","ai","directors","cta"],"emphasis":["why"]}} layout.order는 위 id만으로 페이지 구성·순서를 병원 톤·강점·타겟에 맞게 정하고(hero는 처음, cta는 마지막), map은 지도·gallery는 사진 섹션. layout.emphasis는 강조할 섹션 id를 0~2개.';
 
   try{
     var res=await fetch('/api/generate',{
@@ -941,7 +941,7 @@ async function callCopy(sys,usr){
 }
 var SECTION_SCHEMA={
   hero:'{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내"}',
-  about:'{"about_intro":"80~120자"}',
+  about:'{"about_title":"12자이내","about_intro":"80~120자"}',
   why:'{"strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}]}',
   ai:'{"ai_section_title":"20자이내","ai_section_body":"60~80자"}',
   directors:'{"director_quote":"50~70자"}',
@@ -994,7 +994,6 @@ function renderPreview(){
         +'<div class="h-hosp">'+v('f-name')+'</div>'
         +'<div class="h-div"></div><div class="h-slogan">'+(cp.slogan||'')+'</div>'
         +'<div class="h-sub">'+(cp.hero_subtext||'')+'</div>'
-        +'<button class="h-cta" style="color:'+br+'">'+(cp.cta_text||'자세히 보기')+' →</button>'
       +'</div></div>';
     },
     map:function(e){return addr?'<div style="'+bg(e)+'"><div style="padding:28px 28px 14px"><div class="s-eye" style="color:'+br+'">Location</div><div class="s-ttl" style="margin-bottom:0">찾아오는 길</div></div><div class="map-box"><iframe src="https://maps.google.com/maps?q='+encodeURIComponent(addr)+'&output=embed&z=16" loading="lazy" title="구글 지도"></iframe></div></div>':'';},
@@ -1009,9 +1008,10 @@ function renderPreview(){
     },
     about:function(e){
       if(!cp.about_intro)return '';
+      var atitle=cp.about_title||'한결같은 진료의 기준';
       var body=R.about
-        ?'<div style="display:flex;gap:20px;align-items:flex-start"><img src="'+R.about+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0"><div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p></div></div>'
-        :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">한결같은<br>진료의 기준</div><p class="s-body">'+cp.about_intro+'</p>';
+        ?'<div style="display:flex;gap:20px;align-items:flex-start"><img src="'+R.about+'" style="width:160px;height:200px;object-fit:cover;border-radius:10px;flex-shrink:0"><div style="flex:1"><div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">'+atitle+'</div><p class="s-body">'+cp.about_intro+'</p></div></div>'
+        :'<div class="s-eye" style="color:'+br+'">About</div><div class="s-ttl">'+atitle+'</div><p class="s-body">'+cp.about_intro+'</p>';
       return '<div class="p-sec" style="'+bg(e)+'">'+reroll('about')+body+'</div>';
     },
     why:function(e){
@@ -1021,7 +1021,7 @@ function renderPreview(){
         return '<div style="display:flex;flex-direction:column;gap:10px">'+(wi?'<img src="'+wi+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block">':'')
           +'<div><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="str-num" style="color:'+br+'">0'+(i+1)+'</span><div class="str-ttl">'+(st.title||'')+'</div></div><div class="str-desc">'+(st.desc||'')+'</div></div></div>';
       }).join('')+'</div>';
-      return '<div class="p-sec" style="'+bg(e)+'">'+reroll('why')+'<div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이<br>다릅니다</div>'+items+'</div>';
+      return '<div class="p-sec" style="'+bg(e)+'">'+reroll('why')+'<div class="s-eye" style="color:'+br+'">Why Us</div><div class="s-ttl">이런 점이 다릅니다</div>'+items+'</div>';
     },
     gallery:function(e){
       if(!R.gallery.length)return '';
@@ -1050,15 +1050,15 @@ function renderPreview(){
       return '<div style="position:relative;'+bg(e)+'">'+reroll('directors')+inner+'</div>';
     },
     cta:function(e){
-      return '<div class="cta-ft">'+reroll('cta')+'<div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div><button style="font-size:11px;font-weight:700;padding:10px 18px;border-radius:2px;border:none;background:'+br+';color:#fff;cursor:pointer">'+(cp.cta_text||'자세히 보기')+'</button></div>';
+      return '<div class="cta-ft">'+reroll('cta')+'<div><div class="cta-lbl">예약 및 문의</div><div class="cta-ttl">지금 바로<br>연결하세요</div></div></div>';
     }
   };
   var order=computeLayoutOrder();
   var bodyHtml=order.map(function(o){var fn=sec[o.id];return fn?fn(o.emphasis):'';}).join('');
   document.getElementById('capture-page').innerHTML=
-    '<div class="p-hdr" style="background:'+br+'"><span class="wm">AiU Care</span><span class="bdg">AI 솔루션 도입 병원</span></div>'
+    '<div class="p-hdr" style="background:'+br+'"><span class="wm">'+v('f-name')+'</span><span class="bdg">AI 솔루션 도입 병원</span></div>'
     +bodyHtml
-    +'<div class="pg-ft"><span>AiU Care · WiseAI</span><span>aiu-care.kr</span></div>';
+    +'<div class="pg-ft"><span>'+v('f-name')+'</span><span>'+(v('f-addr')||'')+'</span></div>';
 }
 var PHOTO_GROUPS=[
   {key:'internal',icon:'🏠',label:'병원 내부 사진',hint:'대기실·진료실·복도 등 내부 공간'},
