@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AiU Care 어드민</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Black+Han+Sans&family=Do+Hyeon&family=Gothic+A1:wght@300;400;500;700&family=Hahmlet:wght@400;600;700&family=IBM+Plex+Sans+KR:wght@300;400;500;700&family=Jua&family=Nanum+Gothic:wght@400;700&family=Nanum+Myeongjo:wght@400;700&family=Stylish&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--tf:'Noto Serif KR',serif;--bf:'Noto Sans KR',sans-serif}
+:root{--hf:'Pretendard',sans-serif;--tf:'Pretendard',sans-serif;--bf:'Pretendard',sans-serif}
 body{font-family:'Noto Sans KR',sans-serif;font-size:14px;background:#f5f4f1;color:#1a1a1a;-webkit-font-smoothing:antialiased}
 input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 #app{max-width:640px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 0.5px rgba(0,0,0,.08)}
@@ -109,7 +110,7 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 .p-hero::before{content:"";position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,.06)}
 .h-inner{position:relative;z-index:1}
 .h-lname{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.h-hosp{font-family:var(--tf);font-size:22px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:-.02em}
+.h-hosp{font-family:var(--hf);font-size:22px;font-weight:700;color:#fff;line-height:1.25;letter-spacing:-.02em}
 .h-eye{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .h-eye::before{content:"";width:18px;height:1px;background:rgba(255,255,255,.28);display:inline-block}
 .h-div{width:28px;height:1px;background:rgba(255,255,255,.22);margin-bottom:16px}
@@ -246,8 +247,14 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
     <!-- 폰트 -->
     <div style="margin-bottom:14px">
       <label class="lbl">폰트 설정</label>
-      <span class="ex">제목 폰트는 병원명·섹션 타이틀에, 본문 폰트는 소개문에 적용됩니다</span>
-      <span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:6px;display:block">제목 폰트</span>
+      <span class="ex">병원명(히어로)·제목·본문 폰트를 따로 설정할 수 있습니다</span>
+      <span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:6px;display:block">히어로 병원명 폰트</span>
+      <div class="font-grid" id="hero-font-grid"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input class="inp" id="hero-font-custom" placeholder="직접 입력 (Google Fonts 이름, 예: Gowun Dodum)" style="font-size:11px">
+        <button onclick="applyCustomFont('hero')" style="font-size:11px;padding:7px 12px;border-radius:8px;border:0.5px solid #ddd;background:#f5f4f1;color:#333;cursor:pointer;flex-shrink:0">적용</button>
+      </div>
+      <span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin:8px 0 6px;display:block">제목 폰트</span>
       <div class="font-grid" id="title-font-grid"></div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <input class="inp" id="title-font-custom" placeholder="직접 입력 (Google Fonts 이름, 예: Gowun Dodum)" style="font-size:11px">
@@ -392,7 +399,8 @@ const DEPTS=[
 const TONES=[{id:'trust',label:'신뢰감',icon:'🛡'},{id:'warm',label:'따뜻함',icon:'🤝'},{id:'expert',label:'전문적',icon:'🔬'},{id:'modern',label:'모던',icon:'✦'},{id:'friendly',label:'친근함',icon:'😊'}];
 const FEATURES=[{id:'chat24',label:'24시간 AI 상담',icon:'💬'},{id:'booking',label:'예약 자동 접수',icon:'📅'},{id:'outbound',label:'아웃바운드 콜',icon:'📞'},{id:'aftercare',label:'치료 후 관리 안내',icon:'💊'},{id:'insurance',label:'건강보험 적용 안내',icon:'🏥'}];
 const TITLE_FONTS=[
-  {id:'noto-serif',name:'Noto Serif KR',family:"'Noto Serif KR',serif",preview:'세련된 제목',badge:'기본'},
+  {id:'pretendard',name:'Pretendard',family:"'Pretendard',sans-serif",preview:'프리텐다드',badge:'기본'},
+  {id:'noto-serif',name:'Noto Serif KR',family:"'Noto Serif KR',serif",preview:'세련된 제목'},
   {id:'hahmlet',name:'Hahmlet',family:"'Hahmlet',serif",preview:'고품격 서체'},
   {id:'nanum-myeongjo',name:'나눔명조',family:"'Nanum Myeongjo',serif",preview:'전통 명조체'},
   {id:'black-han-sans',name:'Black Han Sans',family:"'Black Han Sans',sans-serif",preview:'임팩트 제목'},
@@ -400,7 +408,8 @@ const TITLE_FONTS=[
   {id:'jua',name:'Jua',family:"'Jua',sans-serif",preview:'친근한 느낌'},
 ];
 const BODY_FONTS=[
-  {id:'noto-sans',name:'Noto Sans KR',family:"'Noto Sans KR',sans-serif",preview:'읽기 편한 기본 서체',badge:'기본'},
+  {id:'pretendard',name:'Pretendard',family:"'Pretendard',sans-serif",preview:'프리텐다드',badge:'기본'},
+  {id:'noto-sans',name:'Noto Sans KR',family:"'Noto Sans KR',sans-serif",preview:'읽기 편한 기본 서체'},
   {id:'gothic-a1',name:'Gothic A1',family:"'Gothic A1',sans-serif",preview:'깔끔한 고딕 계열'},
   {id:'ibm-plex',name:'IBM Plex Sans KR',family:"'IBM Plex Sans KR',sans-serif",preview:'전문적·기술적 느낌'},
   {id:'nanum-gothic',name:'나눔고딕',family:"'Nanum Gothic',sans-serif",preview:'친근하고 가독성 좋음'},
@@ -445,7 +454,7 @@ const S={
   },
   dept:null,specialties:[],sol:'에이유 (AiU)',features:['chat24','booking','aftercare'],
   tones:['trust'],targets:['common','all_age'],
-  titleFont:'noto-serif',bodyFont:'noto-sans',titleFontCustom:'',bodyFontCustom:'',
+  heroFont:'pretendard',titleFont:'pretendard',bodyFont:'pretendard',heroFontCustom:'',titleFontCustom:'',bodyFontCustom:'',
   heroImg:null,logoImg:null,aboutImg:null,whyImgs:[null,null,null,null],
   photos:{internal:[],external:[],strength:[]},
   directors:[{name:'김민준',title:'대표원장',photo:null,
@@ -585,6 +594,11 @@ function targetLabel(){
   return S.targets.map(function(id){var t=allT.find(function(x){return x.id===id;});return t?t.label:id;}).join(', ');
 }
 
+function curHeroFamily(){
+  if(S.heroFontCustom)return "'"+S.heroFontCustom+"', serif";
+  var f=TITLE_FONTS.find(function(x){return x.id===S.heroFont;});
+  return f?f.family:"'Noto Serif KR',serif";
+}
 function curTitleFamily(){
   if(S.titleFontCustom)return "'"+S.titleFontCustom+"', serif";
   var f=TITLE_FONTS.find(function(x){return x.id===S.titleFont;});
@@ -596,6 +610,7 @@ function curBodyFamily(){
   return f?f.family:"'Noto Sans KR',sans-serif";
 }
 function applyFonts(){
+  document.documentElement.style.setProperty('--hf',curHeroFamily());
   document.documentElement.style.setProperty('--tf',curTitleFamily());
   document.documentElement.style.setProperty('--bf',curBodyFamily());
 }
@@ -612,14 +627,17 @@ function applyCustomFont(which){
   var fam=inp.value.trim();
   if(!fam){alert('사용할 Google Fonts 이름을 입력하세요 (예: Gowun Dodum). fonts.google.com에 있는 정확한 이름이어야 합니다.');return;}
   loadGoogleFont(fam);
-  if(which==='title')S.titleFontCustom=fam;else S.bodyFontCustom=fam;
+  S[which+'FontCustom']=fam;
   applyFonts();
+  renderFontGrid('hero-font-grid',TITLE_FONTS,'heroFont');
+  renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
+  renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
   if(S.copy&&S.showPreview)renderPreview();
 }
 function renderFontGrid(elId,fonts,key){
   var el=document.getElementById(elId);if(!el)return;
   el.innerHTML=fonts.map(function(f){
-    var on=S[key]===f.id&&!(key==='titleFont'?S.titleFontCustom:S.bodyFontCustom);
+    var on=S[key]===f.id&&!S[key+'Custom'];
     return '<div class="font-card'+(on?' on':'')+'" data-key="'+key+'" data-id="'+f.id+'" style="border-color:'+(on?S.brand:'#ddd')+';background:'+(on?bl():'#fff')+'">'+
       (f.badge?'<span class="fc-badge">'+f.badge+'</span>':'')+
       '<div class="fc-name">'+f.name+'</div>'+
@@ -628,7 +646,8 @@ function renderFontGrid(elId,fonts,key){
   el.querySelectorAll('.font-card').forEach(function(c){
     c.addEventListener('click',function(){
       S[this.dataset.key]=this.dataset.id;
-      if(this.dataset.key==='titleFont')S.titleFontCustom='';else S.bodyFontCustom='';
+      S[this.dataset.key+'Custom']='';
+      renderFontGrid('hero-font-grid',TITLE_FONTS,'heroFont');
       renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
       renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
       applyFonts();
@@ -1043,6 +1062,7 @@ function renderPhotos(){
 function renderAll(){
   renderSchedule();renderDepts();renderSpecs();renderSols();
   renderFeats();renderTones();renderTargets();
+  renderFontGrid('hero-font-grid',TITLE_FONTS,'heroFont');
   renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
   renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
   renderDirectors();
