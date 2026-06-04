@@ -99,7 +99,7 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
 .dalle-s-ok{background:#f0fdf4;border:0.5px solid #bbf7d0;color:#15803d}
 .dalle-s-err{background:#fef2f2;border:0.5px solid #fecaca;color:#b91c1c}
 #preview-bar{display:none;padding:10px 18px;background:#f5f4f1;border-bottom:0.5px solid rgba(0,0,0,.08);align-items:center;justify-content:space-between}
-#capture-page{display:none;background:#fff}
+#capture-page{display:none;background:#fff;font-family:var(--bf)}
 #wait-view{display:none;padding:48px 24px;text-align:center;color:#bbb}
 .p-hdr{padding:9px 28px;display:flex;align-items:center;justify-content:space-between}
 .p-hdr .wm{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9)}
@@ -249,8 +249,16 @@ input,select,textarea,button{font-family:'Noto Sans KR',sans-serif}
       <span class="ex">제목 폰트는 병원명·섹션 타이틀에, 본문 폰트는 소개문에 적용됩니다</span>
       <span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin-bottom:6px;display:block">제목 폰트</span>
       <div class="font-grid" id="title-font-grid"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input class="inp" id="title-font-custom" placeholder="직접 입력 (Google Fonts 이름, 예: Gowun Dodum)" style="font-size:11px">
+        <button onclick="applyCustomFont('title')" style="font-size:11px;padding:7px 12px;border-radius:8px;border:0.5px solid #ddd;background:#f5f4f1;color:#333;cursor:pointer;flex-shrink:0">적용</button>
+      </div>
       <span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin:8px 0 6px;display:block">본문 폰트</span>
       <div class="font-grid" id="body-font-grid"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input class="inp" id="body-font-custom" placeholder="직접 입력 (Google Fonts 이름, 예: Gowun Dodum)" style="font-size:11px">
+        <button onclick="applyCustomFont('body')" style="font-size:11px;padding:7px 12px;border-radius:8px;border:0.5px solid #ddd;background:#f5f4f1;color:#333;cursor:pointer;flex-shrink:0">적용</button>
+      </div>
     </div>
     <!-- 로고 -->
     <div style="margin-bottom:12px">
@@ -437,7 +445,7 @@ const S={
   },
   dept:null,specialties:[],sol:'에이유 (AiU)',features:['chat24','booking','aftercare'],
   tones:['trust'],targets:['common','all_age'],
-  titleFont:'noto-serif',bodyFont:'noto-sans',
+  titleFont:'noto-serif',bodyFont:'noto-sans',titleFontCustom:'',bodyFontCustom:'',
   heroImg:null,logoImg:null,aboutImg:null,whyImgs:[null,null,null,null],
   photos:{internal:[],external:[],strength:[]},
   directors:[{name:'김민준',title:'대표원장',photo:null,
@@ -577,10 +585,41 @@ function targetLabel(){
   return S.targets.map(function(id){var t=allT.find(function(x){return x.id===id;});return t?t.label:id;}).join(', ');
 }
 
+function curTitleFamily(){
+  if(S.titleFontCustom)return "'"+S.titleFontCustom+"', serif";
+  var f=TITLE_FONTS.find(function(x){return x.id===S.titleFont;});
+  return f?f.family:"'Noto Serif KR',serif";
+}
+function curBodyFamily(){
+  if(S.bodyFontCustom)return "'"+S.bodyFontCustom+"', sans-serif";
+  var f=BODY_FONTS.find(function(x){return x.id===S.bodyFont;});
+  return f?f.family:"'Noto Sans KR',sans-serif";
+}
+function applyFonts(){
+  document.documentElement.style.setProperty('--tf',curTitleFamily());
+  document.documentElement.style.setProperty('--bf',curBodyFamily());
+}
+function loadGoogleFont(fam){
+  fam=(fam||'').trim();if(!fam)return;
+  var id='gf-'+fam.replace(/[^a-zA-Z0-9]/g,'');
+  if(document.getElementById(id))return;
+  var link=document.createElement('link');link.id=id;link.rel='stylesheet';
+  link.href='https://fonts.googleapis.com/css2?family='+fam.replace(/\s+/g,'+')+'&display=swap';
+  document.head.appendChild(link);
+}
+function applyCustomFont(which){
+  var inp=document.getElementById(which+'-font-custom');if(!inp)return;
+  var fam=inp.value.trim();
+  if(!fam){alert('사용할 Google Fonts 이름을 입력하세요 (예: Gowun Dodum). fonts.google.com에 있는 정확한 이름이어야 합니다.');return;}
+  loadGoogleFont(fam);
+  if(which==='title')S.titleFontCustom=fam;else S.bodyFontCustom=fam;
+  applyFonts();
+  if(S.copy&&S.showPreview)renderPreview();
+}
 function renderFontGrid(elId,fonts,key){
   var el=document.getElementById(elId);if(!el)return;
   el.innerHTML=fonts.map(function(f){
-    var on=S[key]===f.id;
+    var on=S[key]===f.id&&!(key==='titleFont'?S.titleFontCustom:S.bodyFontCustom);
     return '<div class="font-card'+(on?' on':'')+'" data-key="'+key+'" data-id="'+f.id+'" style="border-color:'+(on?S.brand:'#ddd')+';background:'+(on?bl():'#fff')+'">'+
       (f.badge?'<span class="fc-badge">'+f.badge+'</span>':'')+
       '<div class="fc-name">'+f.name+'</div>'+
@@ -589,8 +628,11 @@ function renderFontGrid(elId,fonts,key){
   el.querySelectorAll('.font-card').forEach(function(c){
     c.addEventListener('click',function(){
       S[this.dataset.key]=this.dataset.id;
+      if(this.dataset.key==='titleFont')S.titleFontCustom='';else S.bodyFontCustom='';
       renderFontGrid('title-font-grid',TITLE_FONTS,'titleFont');
       renderFontGrid('body-font-grid',BODY_FONTS,'bodyFont');
+      applyFonts();
+      if(S.copy&&S.showPreview)renderPreview();
     });
   });
 }
@@ -787,12 +829,14 @@ async function runGenerate(){
     var whyNeed=plan.whyUp.map(function(u){return !u;});
     var genCount=(needAbout?1:0)+whyNeed.filter(Boolean).length;
     btn.textContent=genCount?('⏳ AI 이미지 생성 중... ('+genCount+'장, 최대 1~2분)'):'⏳ 미리보기 준비 중...';
+    var imgErrs=[];
+    function gi(p,sz){return genImg(p,sz).catch(function(e){imgErrs.push((e&&e.message)?e.message:String(e));return null;});}
     var imgPromises=[
-      needAbout?genImg(buildPrompt('about'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[0]?genImg(buildPrompt('why',whyCtx[0]||'medical'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[1]?genImg(buildPrompt('why',whyCtx[1]||'equipment'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[2]?genImg(buildPrompt('why',whyCtx[2]||'consultation'),'1024x1024').catch(function(){return null;}):Promise.resolve(null),
-      whyNeed[3]?genImg(buildPrompt('why',whyCtx[3]||'clinic'),'1024x1024').catch(function(){return null;}):Promise.resolve(null)
+      needAbout?gi(buildPrompt('about'),'1024x1024'):Promise.resolve(null),
+      whyNeed[0]?gi(buildPrompt('why',whyCtx[0]||'medical'),'1024x1024'):Promise.resolve(null),
+      whyNeed[1]?gi(buildPrompt('why',whyCtx[1]||'equipment'),'1024x1024'):Promise.resolve(null),
+      whyNeed[2]?gi(buildPrompt('why',whyCtx[2]||'consultation'),'1024x1024'):Promise.resolve(null),
+      whyNeed[3]?gi(buildPrompt('why',whyCtx[3]||'clinic'),'1024x1024'):Promise.resolve(null)
     ];
     var imgs=await Promise.all(imgPromises);
     if(imgs[0]&&needAbout)S.aboutImg=imgs[0];
@@ -802,6 +846,12 @@ async function runGenerate(){
       whyNeed[2]?(imgs[3]||null):null,
       whyNeed[3]?(imgs[4]||null):null
     ];
+
+    if(imgErrs.length){
+      var ieb=document.getElementById('err-bar');
+      ieb.style.display='block';ieb.style.background='#fef2f2';ieb.style.color='#b91c1c';ieb.style.borderColor='#fecaca';
+      ieb.textContent='⚠ AI 이미지 생성 실패 '+imgErrs.length+'건 — '+imgErrs[0];
+    }
 
     S.showPreview=true;
     document.getElementById('admin-view').style.display='none';
@@ -1008,6 +1058,7 @@ document.getElementById('lunch-s').addEventListener('input',function(){S.schedul
 document.getElementById('lunch-e').addEventListener('input',function(){S.schedule.lunch.end=this.value;});
 
 applyBrand('#1A6FA8');
+applyFonts();
 switchTab('basic');
 // file:// 경고 비활성화 (프록시 방식으로 동작)
 </script>
