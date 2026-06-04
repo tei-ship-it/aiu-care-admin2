@@ -4,15 +4,12 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch(e) { return res.status(400).json({ error: 'Invalid JSON' }); }
   }
   if (!body) return res.status(400).json({ error: 'Request body가 없습니다' });
-
   const { type, ...rest } = body;
-
   try {
     if (type === 'copy') {
       const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -29,11 +26,9 @@ module.exports = async function handler(req, res) {
       const data = await response.json();
       return res.status(response.status).json(data);
     }
-
     if (type === 'image') {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return res.status(500).json({ error: 'OpenAI API 키가 설정되지 않았습니다' });
-
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -50,6 +45,8 @@ module.exports = async function handler(req, res) {
       });
       const data = await response.json();
       if (!response.ok) {
+        // 정확한 사유를 Vercel 로그에 남깁니다 (원인 진단용)
+        console.error('[IMAGE_ERROR] status=' + response.status + ' body=' + JSON.stringify(data));
         return res.status(response.status).json({
           error: data.error?.message || JSON.stringify(data)
         });
@@ -60,7 +57,6 @@ module.exports = async function handler(req, res) {
       }
       return res.status(200).json(data);
     }
-
     return res.status(400).json({ error: 'type은 copy 또는 image 여야 합니다' });
   } catch (e) {
     return res.status(500).json({ error: e.message });
