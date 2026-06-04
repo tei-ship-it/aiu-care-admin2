@@ -862,7 +862,7 @@ async function runGenerate(){
   var deptLabel=S.dept?((DEPTS.find(function(d){return d.id===S.dept;})||{}).label||''):'';
 
   var sys='당신은 의료기관 전문 카피라이터입니다. 에이유케어 게이트웨이 병원 소개 페이지 텍스트를 생성합니다.\n규칙: 1.과장·허위 표현 금지 2.'+toneLabel+' 문체 유지 3.순수 JSON만 출력(코드블록 없이)';
-  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_title":"12자이내","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내","layout":{"order":["hero","info","about","why","gallery","ai","directors","cta"],"emphasis":["why"]}} layout.order는 위 id만으로 페이지 구성·순서를 병원 톤·강점·타겟에 맞게 정하고(hero는 처음, cta는 마지막), map은 지도·gallery는 사진 섹션. layout.emphasis는 강조할 섹션 id를 0~2개.';
+  var usr='병원명:'+v('f-name')+'\n원장명:'+(((S.directors[0]||{}).name)||'')+'\n원장정보:'+dirInfo+'\n진료과:'+deptLabel+'\n주요시술항목:'+S.specialties.join(', ')+'\n강점:'+v('f-strengths')+'\n슬로건:'+v('f-slogan')+'\n진료시간:'+schedLines().join(' / ')+'\n브랜드컬러:'+S.brand+'\n톤:'+toneLabel+'\n타겟:'+targetLabel()+'\n강조메시지:'+v('f-message')+'\n솔루션:'+S.sol+'\n활성기능:'+featLabels+'\n\n아래 JSON만 출력:\n{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내","about_title":"병원 철학·가치를 함축한 헤드라인 16자이내, OO 소개 같은 뻔한 표현 금지","about_intro":"80~120자","strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}],"ai_section_title":"20자이내","ai_section_body":"60~80자","director_quote":"50~70자","cta_text":"10자이내","layout":{"order":["hero","info","about","why","gallery","ai","directors","cta"],"emphasis":["why"]}} layout.order는 위 id만으로 페이지 구성·순서를 병원 톤·강점·타겟에 맞게 정하고(hero는 처음, cta는 마지막), map은 지도·gallery는 사진 섹션. layout.emphasis는 강조할 섹션 id를 0~2개.';
 
   try{
     var res=await fetch('/api/generate',{
@@ -941,7 +941,7 @@ async function callCopy(sys,usr){
 }
 var SECTION_SCHEMA={
   hero:'{"hero_headline":"15자이내","hero_subtext":"40자이내","slogan":"20자이내"}',
-  about:'{"about_title":"12자이내","about_intro":"80~120자"}',
+  about:'{"about_title":"병원 철학·가치를 함축한 헤드라인 16자이내, OO 소개 같은 뻔한 표현 금지","about_intro":"80~120자"}',
   why:'{"strengths":[{"title":"8자이내","desc":"25자이내"},{"title":"","desc":""},{"title":"","desc":""},{"title":"","desc":""}]}',
   ai:'{"ai_section_title":"20자이내","ai_section_body":"60~80자"}',
   directors:'{"director_quote":"50~70자"}',
@@ -971,6 +971,10 @@ function computeLayoutOrder(){
   out=out.filter(function(id){return id!=='hero';});out.unshift('hero');
   out=out.filter(function(id){return id!=='cta';});out.push('cta');
   if(out.length<=2)out=['hero','about','why','gallery','ai','directors','info','map','cta'];
+  // 업로드한 사진이 있으면 '병원 둘러보기' 갤러리를 AI 순서와 무관하게 항상 포함, 없으면 제외
+  var hasGallery=imagePlan().gallery.length>0;
+  if(hasGallery&&out.indexOf('gallery')<0){var gpos=out.indexOf('ai');if(gpos>=0)out.splice(gpos,0,'gallery');else out.push('gallery');}
+  if(!hasGallery)out=out.filter(function(id){return id!=='gallery';});
   // 진료안내(info)·찾아오는 길(map)은 항상 CTA 바로 위에 고정 (… → info → map → cta)
   out=out.filter(function(id){return id!=='info'&&id!=='map';});
   var ci=out.indexOf('cta');if(ci<0){out.push('info','map','cta');}else{out.splice(ci,0,'info','map');}
@@ -989,7 +993,7 @@ function renderPreview(){
     hero:function(e){
       var hs=R.hero?'background:linear-gradient(to bottom,rgba(0,0,0,.45),rgba(0,0,0,.65)),url('+R.hero+') center/cover no-repeat':'background:linear-gradient(135deg,'+br+' 0%,rgba('+c.r+','+c.g+','+c.b+',.7) 100%)';
       return '<div class="p-hero hero-center" style="'+hs+'">'+reroll('hero')+'<div class="h-inner">'
-        +(S.logoImg?'<div class="h-logo"><img src="'+S.logoImg+'" style="height:48px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95"></div>':'')
+        +(S.logoImg?'<div class="h-logo"><img src="'+S.logoImg+'" style="height:72px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95"></div>':'')
         +'<div class="h-eye">'+eyebrow+'</div>'
         +'<div class="h-hosp">'+v('f-name')+'</div>'
         +'<div class="h-div"></div><div class="h-slogan">'+(cp.slogan||'')+'</div>'
